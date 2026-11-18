@@ -32,7 +32,7 @@ Elles ont été testées dans le navigateur ou seulement compilées.
 | Accès flash périodiques | À éviter. La flash et la PSRAM partagent le même bus, donc chaque accès FFat ou NVS fait sauter l'image. L'état est gardé en RAM et les écritures NVS sont différées. |
 | CH422G EXIO5 (USB_SEL) | Laissé à **0 (mode USB)** comme ESPHome. La démo Waveshare le met à 1, ce qui correspond au mode CAN. |
 | Rétroéclairage | Marche/arrêt seulement (EXIO2), sans PWM. Luminosité réglée par un voile LVGL. |
-| Batterie | La charge par le CS8501 est entièrement matérielle. D'après le schéma, **seul le port « UART » alimente le chargeur** : le 5 V du port « USB » va directement sur le rail 5 V. **Reste à vérifier** que le voyant CHG s'allume quand le panneau est alimenté par le port UART. |
+| Batterie | La charge par le CS8501 est entièrement matérielle. D'après le schéma, **seul le port « UART » alimente le chargeur** : le 5 V du port « USB » va directement sur le rail 5 V. **Reste à vérifier** que le voyant CHG s'allume quand le panneau est alimenté par le port UART. La carte consomme environ 450 mA et la charge en demande 580 : une source USB de 500 mA (port de PC) ne suffit pas pour charger. Aucune broche de l'ESP32 ni du CH422G n'est reliée au CS8501. |
 | Mesure de batterie | Aucune entrée de l'ESP32 n'est câblée d'origine. Il faut un pont diviseur sur le connecteur Sensor AD (GPIO6). |
 
 ## Programmation de la carte
