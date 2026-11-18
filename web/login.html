@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Panneau HA</title>
+<meta name="description" content="Connexion a la configuration du panneau Home Assistant.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='6' width='28' height='20' rx='4' fill='%230E1013'/%3E%3Crect x='6' y='10' width='9' height='12' rx='2' fill='%23F2B233'/%3E%3Crect x='17' y='10' width='9' height='5' rx='1.5' fill='%234FA3E0'/%3E%3Crect x='17' y='17' width='9' height='5' rx='1.5' fill='%234CAF7A'/%3E%3C/svg%3E">
+<style>
+:root{--bg:#EDF0F4;--panel:#FFFFFF;--line:#D3DAE3;--fg:#1A2130;--muted:#5A6577;--accent:#A86200;--accent-fg:#FFFFFF;--warn:#A8321F;--sel:#2F6FE0}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#12151A;--panel:#191D24;--line:#2B313B;--fg:#E4E8EF;--muted:#97A1B1;--accent:#F0B043;--accent-fg:#1A1406;--warn:#FF8C78;--sel:#5B93FF;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#12151A;--panel:#191D24;--line:#2B313B;--fg:#E4E8EF;--muted:#97A1B1;--accent:#F0B043;--accent-fg:#1A1406;--warn:#FF8C78;--sel:#5B93FF;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+form{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:28px 24px;width:min(380px,100%);display:flex;flex-direction:column;gap:14px}
+h1{margin:0;font-size:20px}
+p{margin:0;color:var(--muted);font-size:13.5px}
+input{font:600 30px/1 ui-monospace,Consolas,monospace;letter-spacing:.35em;text-align:center;padding:12px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);width:100%}
+input:focus-visible,button:focus-visible{outline:2px solid var(--sel);outline-offset:2px}
+button{font:inherit;font-weight:600;padding:10px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-fg);cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+.err{color:var(--warn);font-size:13.5px;min-height:1.5em}
+</style>
+</head>
+<body>
+<form id="f" autocomplete="off">
+  <h1>Panneau HA</h1>
+  <p>Entrez le mot de passe à 6 chiffres affiché sur l'écran « Connecté » du panneau. Il change à chaque démarrage.</p>
+  <label for="pin" style="position:absolute;left:-9999px">Mot de passe</label>
+  <input id="pin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required autofocus>
+  <button id="go" type="submit">Se connecter</button>
+  <div class="err" id="err" role="alert"></div>
+</form>
+<script>
+const f=document.getElementById('f'),pin=document.getElementById('pin'),err=document.getElementById('err'),go=document.getElementById('go');
+pin.addEventListener('input',()=>{pin.value=pin.value.replace(/\D/g,'').slice(0,6);err.textContent='';if(pin.value.length===6)f.requestSubmit();});
+f.addEventListener('submit',async e=>{
+  e.preventDefault();if(pin.value.length!==6){err.textContent='6 chiffres requis.';return;}
+  go.disabled=true;err.textContent='';
+  try{
+    const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin:pin.value})});
+    if(r.ok){location.reload();return;}
+    let m='Échec de la connexion.';try{m=(await r.json()).message||m;}catch(_){}
+    err.textContent=m;pin.value='';pin.focus();
+  }catch(_){err.textContent='Panneau injoignable.';}
+  finally{go.disabled=false;}
+});
+</script>
+</body>
+</html>

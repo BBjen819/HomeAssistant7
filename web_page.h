@@ -1,0 +1,1156 @@
+// FICHIER GENERE par tools/embed_web.ps1 depuis web/*.html - ne pas modifier.
+#pragma once
+#include <Arduino.h>
+
+static const char INDEX_HTML[] PROGMEM = R"HTMLPAGE(<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Panneau HA</title>
+<meta name="description" content="Configuration du panneau Home Assistant 7 pouces : connexion a Home Assistant et creation du tableau de bord.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='6' width='28' height='20' rx='4' fill='%230E1013'/%3E%3Crect x='6' y='10' width='9' height='12' rx='2' fill='%23F2B233'/%3E%3Crect x='17' y='10' width='9' height='5' rx='1.5' fill='%234FA3E0'/%3E%3Crect x='17' y='17' width='9' height='5' rx='1.5' fill='%234CAF7A'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Montserrat:wght@500&display=swap">
+<style>
+/* Atelier en trois colonnes : widgets a gauche, l'ecran au centre, l'inspecteur a droite. */
+:root{
+  --bg:#EDF0F4; --panel:#FFFFFF; --bench:#E1E6ED; --line:#D3DAE3; --fg:#1A2130; --muted:#5A6577;
+  --accent:#A86200; --accent-fg:#FFFFFF; --accent-soft:#F6E7CF; --sel:#2F6FE0; --warn:#A8321F; --warn-soft:#FBE9E5;
+  --info:#285FB8; --info-soft:#E6EEFB; --ok:#2E7D4F; --code-bg:#F6F8FA; --bezel:#0E1013; --bezel-edge:#2A2F37; --shadow:0 1px 2px rgba(20,30,50,.08);
+  --ui:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12151A; --panel:#191D24; --bench:#0F1216; --line:#2B313B; --fg:#E4E8EF; --muted:#97A1B1;
+  --accent:#F0B043; --accent-fg:#1A1406; --accent-soft:#3A2D14; --sel:#5B93FF; --warn:#FF8C78; --warn-soft:#3A1E1A;
+  --info:#7FB0FF; --info-soft:#18243A; --ok:#6FCF97; --code-bg:#14181E; --bezel:#050607; --bezel-edge:#2A2F37; --shadow:none; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12151A; --panel:#191D24; --bench:#0F1216; --line:#2B313B; --fg:#E4E8EF; --muted:#97A1B1;
+  --accent:#F0B043; --accent-fg:#1A1406; --accent-soft:#3A2D14; --sel:#5B93FF; --warn:#FF8C78; --warn-soft:#3A1E1A;
+  --info:#7FB0FF; --info-soft:#18243A; --ok:#6FCF97; --code-bg:#14181E; --bezel:#050607; --bezel-edge:#2A2F37; --shadow:none; color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--fg);font:14px/1.45 var(--ui)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--sel);outline-offset:2px}
+
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:10px 20px;background:var(--panel);border-bottom:1px solid var(--line);
+  padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.brand{display:flex;align-items:baseline;gap:8px;white-space:nowrap}
+.brand b{font-weight:600;font-size:16px;letter-spacing:-.01em}
+.brand span{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.tabs{display:flex;flex-wrap:wrap;gap:4px;flex:1;min-width:0}
+.tab{border:1px solid var(--line);background:transparent;border-radius:6px;padding:4px 10px;font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.tab.on{background:var(--accent-soft);border-color:var(--accent);color:var(--fg)}
+.tab.add{border-style:dashed}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 12px;font-size:13px;box-shadow:var(--shadow);display:inline-flex;align-items:center;gap:6px}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);font-weight:500}
+.btn.danger{color:var(--warn)}
+.btn:disabled{opacity:.45;cursor:default}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.bright{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12.5px;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.bright input{width:110px;accent-color:var(--accent)}
+.bright span{min-width:3.6em}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex:none}
+.dot.ok{background:#4CAF7A}.dot.bad{background:#E5533D}.dot.wait{background:#F0B043}
+
+.work{display:grid;grid-template-columns:196px minmax(0,1fr) 300px;align-items:start}
+.shelf,.insp{background:var(--panel);padding:16px;align-self:stretch}
+.shelf{border-right:1px solid var(--line);padding-left:max(16px,env(safe-area-inset-left,0px))}
+.insp{border-left:1px solid var(--line);padding-right:max(16px,env(safe-area-inset-right,0px))}
+h2{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+.shelf .list{display:flex;flex-direction:column;gap:4px}
+.add{display:grid;grid-template-columns:22px minmax(0,1fr);gap:2px 10px;align-items:center;text-align:left;border:1px solid transparent;background:transparent;border-radius:8px;padding:7px 8px}
+.add:hover{background:var(--bg);border-color:var(--line)}
+.add svg{grid-row:span 2;color:var(--accent)}
+.add b{font-weight:500;font-size:13.5px}
+.add small{color:var(--muted);font-size:11.5px;line-height:1.3}
+.shelf .tip{margin-top:18px;font-size:12px;color:var(--muted);line-height:1.5}
+kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px;background:var(--bg)}
+
+.center{min-width:0;display:flex;flex-direction:column}
+.bar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:10px 24px;border-bottom:1px solid var(--line);font-size:13px;color:var(--muted)}
+.bar label{display:flex;align-items:center;gap:6px}
+.bar select{padding:3px 6px;border:1px solid var(--line);border-radius:5px;background:var(--panel)}
+.bar .sp{flex:1}
+.bar .cap{font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums}
+.savestate{font-size:12.5px}
+.savestate.dirty{color:var(--accent)}
+.savestate.ok{color:var(--ok)}
+.savestate.err{color:var(--warn)}
+.bench{background:var(--bench);padding:24px;display:flex;justify-content:safe center;min-width:0;overflow:auto}
+.bezel{background:var(--bezel);padding:16px;border-radius:14px;box-shadow:0 0 0 1px var(--bezel-edge),0 18px 40px -18px rgba(0,0,0,.55);display:inline-block;flex:none}
+.hold{overflow:hidden;position:relative}
+.screen{position:absolute;left:0;top:0;transform-origin:0 0;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;font-kerning:normal}
+.screen.grid::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:50;
+  background-image:linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px);background-size:var(--g) var(--g)}
+.w{position:absolute;cursor:move}
+.w.sel{outline:calc(2px * var(--inv,1)) solid var(--sel);outline-offset:calc(2px * var(--inv,1));z-index:40}
+.w .tx{white-space:pre-wrap;overflow-wrap:anywhere}
+.w .ctr{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 6px;white-space:pre-wrap;overflow:hidden}
+.w .ctr>span{display:block;width:100%}
+.w .knob{position:absolute;border-radius:50%}
+.w .fill{position:absolute;left:0;top:0;bottom:0}
+.w svg{display:block}
+.h{position:absolute;width:calc(12px * var(--inv,1));height:calc(12px * var(--inv,1));background:var(--sel);border:calc(2px * var(--inv,1)) solid #fff;border-radius:calc(3px * var(--inv,1));z-index:41}
+.h-r{right:calc(-8px * var(--inv,1));top:calc(50% - 6px * var(--inv,1));cursor:ew-resize}
+.h-b{bottom:calc(-8px * var(--inv,1));left:calc(50% - 6px * var(--inv,1));cursor:ns-resize}
+.h-br{right:calc(-8px * var(--inv,1));bottom:calc(-8px * var(--inv,1));cursor:nwse-resize}
+
+.out{padding:20px 24px 28px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.outhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}
+.outhead h2{margin:0}
+.outhead p{margin:0;color:var(--muted);font-size:12.5px;flex:1;min-width:220px}
+.warns{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.warns li{background:var(--warn-soft);color:var(--warn);border-radius:6px;padding:6px 10px;font-size:12.5px}
+.warns li.info{background:var(--info-soft);color:var(--info)}
+.warns li.none{background:transparent;color:var(--muted);padding-left:0}
+.warns li code{font-family:var(--mono)}
+.banner{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;background:var(--info-soft);color:var(--info);border-bottom:1px solid var(--line);padding:8px 24px;font-size:13px}
+
+.ihead{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:12px}
+.ihead .ty{font-size:16px;font-weight:600}
+.iacts{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px}
+.iacts .btn{padding:4px 8px;font-size:12px}
+.grp{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}
+.grp:first-of-type{border-top:0;margin-top:0;padding-top:0}
+.fld{display:grid;grid-template-columns:96px minmax(0,1fr);align-items:center;gap:4px 10px;margin-bottom:8px}
+.fld label{font-size:12.5px;color:var(--muted)}
+.fld input[type=text],.fld input[type=number],.fld input[type=password],.fld select,.fld textarea{width:100%;min-width:0;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.fld input[type=text],.fld input[type=password],.fld textarea{font-family:var(--mono);font-size:12.5px}
+.fld textarea{resize:vertical}
+.fld input[type=color]{width:100%;height:30px;padding:2px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.fld.chk input{justify-self:start;width:18px;height:18px}
+.fld .hint{grid-column:2;font-size:11.5px;color:var(--muted);line-height:1.35}
+.geo{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.geo .fld{grid-template-columns:22px minmax(0,1fr)}
+.note{font-size:12.5px;color:var(--muted);line-height:1.5;margin:4px 0 0}
+
+.scrim{position:fixed;inset:0;background:rgba(10,14,20,.55);display:flex;align-items:center;justify-content:center;z-index:100;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.dlg{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;width:min(640px,100%);display:flex;flex-direction:column;gap:12px;max-height:100%;overflow:auto}
+.dlg h3{margin:0;font-size:17px}
+.dlg p{margin:0;color:var(--muted);font-size:13px}
+.dlg textarea.big{width:100%;height:220px;font:12px/1.5 var(--mono);border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--code-bg);resize:vertical}
+.dlg .msg{font-size:12.5px;color:var(--muted);flex:1;min-width:120px}
+.dlg .msg.ok{color:var(--ok)}.dlg .msg.err{color:var(--warn)}
+.dlg .fld{grid-template-columns:110px minmax(0,1fr)}
+.status{display:flex;align-items:center;gap:8px;font-size:13px}
+
+@media (max-width:1080px){
+  .work{grid-template-columns:minmax(0,1fr)}
+  .shelf{border-right:0;border-bottom:1px solid var(--line);padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .shelf .list{flex-direction:row;flex-wrap:wrap}
+  .add{grid-template-columns:20px auto;border-color:var(--line)}
+  .add small,.shelf .tip{display:none}
+  .insp{border-left:0;border-top:1px solid var(--line);order:3;padding-left:max(16px,env(safe-area-inset-left,0px))}
+  .bench{padding:16px}
+  .bar,.out,.banner{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand"><b>Panneau HA</b><span id="devName">hors ligne</span></div>
+  <div class="tabs" id="pageTabs" aria-label="Pages"></div>
+  <div class="actions">
+    <label class="bright" for="brightRange" title="Luminosité de l'écran (0 % = rétroéclairage éteint, un toucher le rallume)">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3.2" fill="currentColor"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6L13 13M3 13l1.4-1.4M11.6 4.4L13 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <input type="range" id="brightRange" min="0" max="100" step="1" value="100" aria-label="Luminosité de l'écran">
+      <span id="brightVal">100 %</span>
+    </label>
+    <button class="btn" id="undoBtn" title="Annuler (Ctrl+Z)">Annuler</button>
+    <button class="btn" id="haBtn"><span class="dot" id="haDot"></span>Home Assistant</button>
+    <button class="btn" id="battBtn" title="Mesure de la batterie">Batterie</button>
+    <button class="btn" id="projBtn">Projet</button>
+    <button class="btn primary" id="saveBtn">Enregistrer sur l'écran</button>
+    <button class="btn" id="logoutBtn" title="Se déconnecter de la configuration">Déconnexion</button>
+  </div>
+</div>
+
+<div class="banner" id="draftBanner" hidden>
+  <span>Un brouillon non enregistré a été trouvé dans ce navigateur.</span>
+  <button class="btn" id="draftRestore">Restaurer le brouillon</button>
+  <button class="btn" id="draftDrop">Ignorer</button>
+</div>
+
+<div class="work">
+  <aside class="shelf">
+    <h2>Ajouter</h2>
+    <div class="list" id="shelf"></div>
+    <p class="tip">Glissez pour déplacer, tirez les poignées bleues pour redimensionner. <kbd>←↑→↓</kbd> 1 px, avec <kbd>Maj</kbd> le pas de la grille. <kbd>Suppr</kbd> supprime, <kbd>Ctrl</kbd>+<kbd>D</kbd> duplique, <kbd>Ctrl</kbd>+<kbd>Z</kbd> annule.</p>
+    <p class="tip"><kbd>Maj</kbd>/<kbd>Ctrl</kbd>+clic sélectionne plusieurs éléments, <kbd>Ctrl</kbd>+<kbd>A</kbd> toute la page. <kbd>Ctrl</kbd>+<kbd>C</kbd>, <kbd>X</kbd>, <kbd>V</kbd> copient, coupent et collent, aussi d'une page à l'autre ou entre deux onglets. <kbd>R</kbd> pivote de 90° (<kbd>Maj</kbd>+<kbd>R</kbd> dans l'autre sens).</p>
+    <p class="tip">Sur l'écran, un appui long de 3 s sur le fond d'une page ouvre l'écran de configuration (IP, Wi-Fi, luminosité). Un bouton d'action réglé sur « Ouvrir l'écran de configuration » y mène aussi.</p>
+    <p class="tip">Luminosité : utilisez l'entité <code>screen.brightness</code> (curseur, jauge, valeur) ou <code>screen.backlight</code> (bouton, interrupteur).</p>
+  </aside>
+
+  <section class="center">
+    <div class="bar">
+      <label for="snapSel">Grille
+        <select id="snapSel"><option value="0">Libre</option><option value="4">4 px</option><option value="8">8 px</option><option value="16">16 px</option></select>
+      </label>
+      <label for="gridChk"><input type="checkbox" id="gridChk"> Afficher</label>
+      <label for="zoomSel">Zoom
+        <select id="zoomSel"><option value="fit">Ajuster</option><option value="1">100 % (taille réelle en pixels)</option></select>
+      </label>
+      <span class="sp"></span>
+      <span class="savestate" id="saveState"></span>
+      <span class="cap" id="caption"></span>
+    </div>
+    <div class="bench" id="bench">
+      <div class="bezel"><div class="hold" id="hold"><div class="screen" id="screen"></div></div></div>
+    </div>
+    <div class="out">
+      <div class="outhead">
+        <h2>Vérifications</h2>
+        <p>L'aperçu utilise la même police (Montserrat), les mêmes tailles et hauteurs de ligne que l'écran. Les accents sont remplacés sur l'écran, et l'aperçu montre le texte tel qu'il sera affiché.</p>
+      </div>
+      <ul class="warns" id="warns"></ul>
+    </div>
+  </section>
+
+  <aside class="insp" id="insp"></aside>
+</div>
+
+<datalist id="entList"></datalist>
+
+<div class="scrim" id="haModal" hidden>
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="haTitle">
+    <h3 id="haTitle">Connexion à Home Assistant</h3>
+    <p>L'écran utilise l'API REST de Home Assistant. Créez un jeton dans Home Assistant : <b>Profil → Sécurité → Jetons d'accès longue durée</b>. Utilisez de préférence l'adresse IP (ex. <code>http://192.168.1.10:8123</code>).</p>
+    <div class="status"><span class="dot" id="haDot2"></span><span id="haStatus">…</span></div>
+    <div class="fld"><label for="haUrl">Adresse</label><input type="text" id="haUrl" placeholder="http://192.168.1.10:8123" spellcheck="false" autocomplete="off"></div>
+    <div class="fld"><label for="haTok">Jeton</label><input type="password" id="haTok" spellcheck="false" autocomplete="off">
+      <div class="hint" id="haTokHint"></div></div>
+    <div class="fld"><label for="apiKey">Clé API de l'écran</label>
+      <div class="actions"><input type="text" id="apiKey" readonly spellcheck="false" style="flex:1;min-width:0">
+        <button class="btn" id="apiCopy" type="button">Copier</button><button class="btn danger" id="apiRegen" type="button">Régénérer</button></div>
+      <div class="hint">Permet à Home Assistant de régler la luminosité (<code>/api/brightness</code>) avec l'en-tête <code>Authorization: Bearer &lt;clé&gt;</code>. Le reste de l'interface exige le mot de passe affiché sur l'écran.</div></div>
+    <div class="actions">
+      <button class="btn" id="haTest">Tester</button>
+      <button class="btn primary" id="haSave">Enregistrer</button>
+      <button class="btn" id="haEnt">Recharger les entités</button>
+      <span class="msg" id="haMsg"></span>
+      <button class="btn" id="haClose">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<div class="scrim" id="battModal" hidden>
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="battTitle">
+    <h3 id="battTitle">Batterie</h3>
+    <p><b>Charge :</b> elle est entièrement gérée par la puce CS8501 de la carte (580 mA), dès que la carte reçoit du 5 V par USB. Aucun réglage logiciel ne peut l'activer ni la bloquer. Pendant la charge, le voyant <b>CHG</b> est allumé, puis <b>DONE</b> quand elle est terminée.</p>
+    <p><b>Mesure :</b> la tension de la batterie n'est reliée à aucune entrée de l'ESP32 sur cette carte. Pour l'afficher, ajoutez un pont diviseur entre le + de la batterie et le connecteur <b>Sensor AD</b> (GPIO6) : 100 kΩ du + batterie vers AD, 100 kΩ de AD vers GND (rapport 2). N'activez la mesure qu'après ce câblage : sinon, l'entrée flotte et les valeurs sont fausses.</p>
+    <div class="fld chk"><label for="battEn">Mesure activée</label><input type="checkbox" id="battEn"></div>
+    <div class="fld"><label for="battRatio">Rapport du pont</label><input type="number" id="battRatio" step="0.01" min="1" max="20">
+      <div class="hint">(R1 + R2) / R2. Ajustez-le pour que la tension affichée corresponde à celle d'un multimètre.</div></div>
+    <div class="status"><span id="battNow">…</span></div>
+    <p>Entités du designer : <code>screen.battery</code> (%) et <code>screen.battery_voltage</code> (V). Le pourcentage est une estimation à partir de la tension : pendant la charge, il paraît plus élevé que la réalité.</p>
+    <div class="actions">
+      <button class="btn primary" id="battSave">Enregistrer</button>
+      <span class="msg" id="battMsg"></span>
+      <button class="btn" id="battClose">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<div class="scrim" id="modal" hidden>
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
+    <h3 id="dlgTitle">Projet</h3>
+    <p>Le tableau de bord est enregistré sur l'écran avec le bouton « Enregistrer sur l'écran ». Pour garder une copie ou la transférer, enregistrez-le dans un fichier (ou copiez le texte ci-dessous). Pour ouvrir un projet, choisissez son fichier ou collez son texte puis appuyez sur Charger.</p>
+    <textarea class="big" id="projTxt" spellcheck="false" aria-label="Texte du projet"></textarea>
+    <div class="actions">
+      <button class="btn primary" id="projSave">Enregistrer le fichier</button>
+      <button class="btn" id="projOpen">Ouvrir un fichier…</button>
+      <input type="file" id="projFile" accept=".json,application/json" hidden>
+      <button class="btn" id="projCopy">Copier</button>
+      <button class="btn" id="projLoad">Charger</button>
+      <button class="btn" id="projExample">Exemple</button>
+      <button class="btn" id="projBlank">Projet vide</button>
+      <span class="msg" id="projMsg"></span>
+      <button class="btn" id="projClose">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(()=>{
+const $=s=>document.querySelector(s);
+const DRAFT_KEY='ha-panel-draft-v1';
+
+/* ---------- Ecran ---------- */
+// Tailles Montserrat compilees dans le firmware et hauteur de ligne LVGL de chacune
+const LH={12:15,14:16,16:18,18:21,20:22,22:24,24:27,28:30,32:35,36:40,40:44,48:52};
+let SIZES=Object.keys(LH).map(Number);
+let RES={w:800,h:480};
+let ONLINE=false;
+
+// Meme table que deaccent() dans dashboard.cpp : l'apercu montre le texte reel
+const LATIN1='AAAAAAACEEEEIIIIDNOOOOOxOUUUUYPsaaaaaaaceeeeiiiidnooooo/ouuuuypy';
+function devText(s){let o='';for(const ch of String(s??'')){const c=ch.codePointAt(0);
+  if(c<0x80||c===0xB0||c===0x2022)o+=ch;else if(c>=0xC0&&c<=0xFF)o+=LATIN1[c-0xC0];
+  else if(c===0x152)o+='OE';else if(c===0x153)o+='oe';else if(c===0x2018||c===0x2019)o+="'";
+  else if(c===0xAB||c===0xBB||c===0x201C||c===0x201D)o+='"';else if(c===0x2013||c===0x2014)o+='-';
+  else if(c===0xA0)o+=' ';else o+='?';}return o;}
+const nearestSize=s=>SIZES.reduce((a,b)=>Math.abs(b-s)<Math.abs(a-s)?b:a,SIZES[0]);
+
+const TYPES={tile:['Panneau','Fond, regroupe des éléments'],label:['Texte','Texte fixe'],value:['Valeur','Affiche l\'état d\'une entité'],
+  toggle:['Bouton bascule','S\'allume quand l\'entité est active'],action:['Bouton d\'action','Script, scène ou page'],switch:['Interrupteur','Marche/arrêt d\'une entité'],
+  slider:['Curseur','Luminosité ou nombre'],arc:['Jauge','Valeur sur un arc'],bar:['Barre','Valeur en barre']};
+const PREFIX={tile:'tile',label:'lbl',value:'val',toggle:'btn',action:'act',switch:'sw',slider:'sld',arc:'gauge',bar:'bar'};
+const ICON={
+  tile:'<rect x="3" y="5" width="16" height="12" rx="3" fill="currentColor" opacity=".35"/>',
+  label:'<path d="M5 6h12M11 6v11" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>',
+  value:'<text x="11" y="16" text-anchor="middle" font-size="10" font-family="monospace" font-weight="700" fill="currentColor">21°</text>',
+  toggle:'<rect x="2" y="6" width="18" height="10" rx="3" fill="currentColor"/>',
+  action:'<rect x="2.5" y="6.5" width="17" height="9" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 9l3 2-3 2" stroke="currentColor" stroke-width="1.6" fill="none"/>',
+  switch:'<rect x="2" y="7" width="18" height="8" rx="4" fill="currentColor" opacity=".45"/><circle cx="15" cy="11" r="3.2" fill="currentColor"/>',
+  slider:'<path d="M3 11h16" stroke="currentColor" stroke-width="2" opacity=".45" stroke-linecap="round"/><path d="M3 11h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="11" r="3.2" fill="currentColor"/>',
+  arc:'<path d="M5.3 16.7A8 8 0 1 1 16.7 16.7" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".4"/><path d="M5.3 16.7A8 8 0 0 1 11 3" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"/>',
+  bar:'<rect x="2" y="8" width="18" height="6" rx="3" fill="currentColor" opacity=".35"/><rect x="2" y="8" width="11" height="6" rx="3" fill="currentColor"/>'
+};
+
+function defaults(t){
+  const txt={size:24,color:'#FFFFFF'};
+  switch(t){
+    case 'tile': return {w:240,h:160,bg:'#2A2D34',radius:16,borderW:0,borderColor:'#454B57'};
+    case 'label': return {w:220,h:0,text:'Texte',...txt,align:'LEFT'};
+    case 'value': return {w:240,h:0,entity:'',attribute:'',valueType:'number',decimals:1,prefix:'',suffix:'°C',sample:'21.4',...txt,size:48,align:'LEFT'};
+    case 'toggle': return {w:200,h:120,text:'Cuisine',entity:'',action:'',...txt,size:20,bg:'#2A2D34',onBg:'#F2B233',onColor:'#1A1A1A',radius:16,previewOn:false};
+    case 'action': return {w:200,h:80,text:'Bonne nuit',mode:'ha',entity:'',action:'',target:'',...txt,size:20,bg:'#3B4252',radius:12};
+    case 'switch': return {w:100,h:50,entity:'',action:'',bg:'#454B57',onBg:'#4CAF7A',knob:'#FFFFFF',previewOn:true};
+    case 'slider': return {w:320,h:24,entity:'',min:0,max:255,action:'',bg:'#454B57',onBg:'#F2B233',knob:'#FFFFFF',sample:'160'};
+    case 'arc': return {w:180,h:180,entity:'',attribute:'',min:0,max:100,thick:16,bg:'#3A3F48',onBg:'#4FA3E0',showValue:true,decimals:0,suffix:'%',...txt,size:32,sample:'46'};
+    case 'bar': return {w:300,h:20,entity:'',attribute:'',min:0,max:100,bg:'#3A3F48',onBg:'#4CAF7A',radius:10,sample:'72'};
+  }
+}
+function sample(){
+  const W=(type,o)=>Object.assign({type,x:0,y:0},defaults(type),o);
+  const dim='#9AA3B2';
+  return {res:{...RES},snap:8,grid:true,cur:0,pages:[
+    {id:'page_main',bg:'#15171C',widgets:[
+      W('tile',{id:'tile_temp',x:24,y:24,w:360,h:200}),
+      W('label',{id:'lbl_outside',x:48,y:44,w:300,text:'Extérieur',size:20,color:dim}),
+      W('value',{id:'val_outside',x:48,y:96,w:312,entity:'sensor.outdoor_temperature',size:48}),
+      W('toggle',{id:'btn_living',x:416,y:24,w:172,h:200,text:'Salon',entity:'light.living_room',previewOn:true}),
+      W('toggle',{id:'btn_kitchen',x:604,y:24,w:172,h:200,text:'Cuisine',entity:'light.kitchen'}),
+      W('tile',{id:'tile_dim',x:24,y:248,w:360,h:208}),
+      W('label',{id:'lbl_dim',x:48,y:268,w:300,text:'Luminosité du salon',size:18,color:dim}),
+      W('slider',{id:'sld_living',x:56,y:360,w:296,h:24,entity:'light.living_room'}),
+      W('arc',{id:'gauge_humidity',x:416,y:264,w:172,h:172,thick:14,entity:'sensor.humidity'}),
+      W('action',{id:'act_climate',x:604,y:248,w:172,h:208,text:'Climat',mode:'page',target:'page_climate',entity:''})
+    ]},
+    {id:'page_climate',bg:'#15171C',widgets:[
+      W('label',{id:'lbl_climate',x:24,y:24,w:400,text:'Climat',size:36}),
+      W('label',{id:'lbl_indoor',x:24,y:96,w:300,text:'Intérieur',size:20,color:dim}),
+      W('value',{id:'val_indoor',x:24,y:128,w:360,entity:'sensor.indoor_temperature',size:48}),
+      W('label',{id:'lbl_battery',x:24,y:248,w:360,text:'Batterie du téléphone',size:18,color:dim}),
+      W('bar',{id:'bar_battery',x:24,y:280,w:360,h:20,entity:'sensor.phone_battery_level'}),
+      W('action',{id:'act_back',x:24,y:400,w:160,h:56,text:'Retour',mode:'page',target:'page_main',entity:''})
+    ]}
+  ]};
+}
+function blank(){return {res:{...RES},snap:8,grid:true,cur:0,pages:[{id:'page_main',bg:'#15171C',widgets:[]}]};}
+
+// Adapte un projet aux capacites de l'ecran (tailles de police, resolution)
+function normalize(o){
+  o.res={...RES};o.snap=o.snap??8;o.grid=o.grid??true;o.cur=Math.min(o.cur||0,o.pages.length-1);
+  for(const p of o.pages)for(const w of p.widgets){
+    if(w.size!=null)w.size=nearestSize(+w.size||20);
+    delete w.family;delete w.weight;
+  }
+  return o;
+}
+
+let S=blank(), sel=null, drag=null, scale=1, undoStack=[], lastSnap='', savedKey=null;
+// Selection : "sel" est l'element principal (inspecteur, poignees), "extra" les
+// autres elements ajoutes avec Maj/Ctrl+clic.
+let extra=new Set();
+const isSel=id=>id===sel||extra.has(id);
+const selIds=()=>[sel,...extra].filter(id=>id&&find(id));
+function clearSel(){sel=null;extra.clear();}
+function selectOnly(id){sel=id;extra.clear();}
+const page=()=>S.pages[S.cur]||S.pages[0];
+const allW=()=>S.pages.flatMap(p=>p.widgets);
+function find(id){for(const p of S.pages){const w=p.widgets.find(x=>x.id===id);if(w)return w;}return null;}
+function pageOf(id){return S.pages.find(p=>p.widgets.some(x=>x.id===id));}
+function slug(s){let v=String(s).toLowerCase().replace(/[^a-z0-9_]+/g,'_').replace(/^_+|_+$/g,'');if(/^\d/.test(v))v='_'+v;return v||'w';}
+const usedIds=()=>new Set([...S.pages.map(p=>p.id),...allW().map(w=>w.id)]);
+function uid(pre){const u=usedIds();let n=1;while(u.has(pre+'_'+n))n++;return pre+'_'+n;}
+const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const snapv=v=>{const g=+S.snap||1;return Math.round(v/g)*g;};
+const dom=e=>(e||'').split('.')[0];
+const isText=w=>w.type==='label'||w.type==='value';
+const layoutKey=o=>JSON.stringify({...o,cur:0});
+
+// Entites locales de l'ecran (gerees par le firmware, pas par Home Assistant)
+const LOCAL_ENT=[['screen.brightness','Écran : luminosité (0 à 100 %)'],['screen.backlight','Écran : rétroéclairage (marche/arrêt)'],
+  ['screen.battery','Écran : batterie (%) — lecture seule'],['screen.battery_voltage','Écran : tension batterie (V) — lecture seule']];
+const READONLY_LOCAL=['screen.battery','screen.battery_voltage'];
+const isLocal=e=>String(e||'').startsWith('screen.');
+
+// Meme logique que default_action() dans dashboard.cpp
+function defaultAction(w){
+  const d=dom(w.entity);
+  if(d==='screen')return 'local (écran)';
+  if(w.type==='slider')return d==='light'?'light.turn_on':(d?d+'.set_value':'');
+  if(w.type==='action')return ({scene:'scene.turn_on',script:'script.turn_on',button:'button.press',input_button:'input_button.press',automation:'automation.trigger'})[d]||'homeassistant.toggle';
+  return ['light','switch','fan','input_boolean','cover','media_player','climate'].includes(d)?d+'.toggle':'homeassistant.toggle';
+}
+
+/* ---------- historique / brouillon ---------- */
+function saveDraft(){try{localStorage.setItem(DRAFT_KEY,JSON.stringify(S));}catch(e){}}
+function commit(){const j=JSON.stringify(S);if(j===lastSnap)return;undoStack.push(lastSnap);if(undoStack.length>100)undoStack.shift();lastSnap=j;saveDraft();renderChecks();renderSaveState();$('#undoBtn').disabled=false;}
+function undo(){if(!undoStack.length)return;lastSnap=undoStack.pop();S=JSON.parse(lastSnap);
+  for(const id of [...extra])if(!find(id))extra.delete(id);
+  if(sel&&!find(sel)){sel=[...extra][0]||null;extra.delete(sel);}
+  saveDraft();renderAll();}
+
+/* ---------- apercu ---------- */
+const scr=$('#screen'),hold=$('#hold'),bench=$('#bench');
+function fontCss(w,color){const s=nearestSize(+w.size||20);return `font-family:Montserrat,sans-serif;font-size:${s}px;font-weight:500;line-height:${LH[s]}px;color:${color||w.color}`;}
+function valText(w){if(w.valueType==='text')return (w.prefix||'')+(w.sample||'')+(w.suffix||'');const n=parseFloat(w.sample);return (w.prefix||'')+(isNaN(n)?'--':n.toFixed(Math.max(0,w.decimals|0)))+(w.suffix||'');}
+function pct(w){const lo=+w.min||0,hi=Math.max(+w.max,lo+1),n=parseFloat(w.sample),r=(n-lo)/(hi-lo);return isNaN(r)?0:Math.max(0,Math.min(1,r));}
+function arcPath(cx,cy,r,a0,a1){const p=a=>[cx+r*Math.cos(a*Math.PI/180),cy+r*Math.sin(a*Math.PI/180)];const [x0,y0]=p(a0),[x1,y1]=p(a1);return `M${x0.toFixed(2)} ${y0.toFixed(2)}A${r} ${r} 0 ${a1-a0>180?1:0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;}
+
+function paint(el,w){
+  const st=el.style;st.left=w.x+'px';st.top=w.y+'px';st.width=w.w+'px';st.height=isText(w)?'auto':w.h+'px';
+  // Rotation autour du centre, comme transform_rotation + pivot 50 % dans LVGL
+  st.transform=+w.rot?`rotate(${+w.rot}deg)`:'';
+  let h='';
+  switch(w.type){
+    case 'tile':st.background=w.bg;st.borderRadius=w.radius+'px';st.border=+w.borderW?`${w.borderW}px solid ${w.borderColor}`:'none';break;
+    case 'label':h=`<div class="tx" style="${fontCss(w)};text-align:${w.align.toLowerCase()}">${esc(devText(w.text))}</div>`;break;
+    case 'value':h=`<div class="tx" style="${fontCss(w)};text-align:${w.align.toLowerCase()}">${esc(devText(valText(w)))}</div>`;break;
+    case 'toggle':case 'action':{const on=w.type==='toggle'&&w.previewOn;st.background=on?w.onBg:w.bg;st.borderRadius=w.radius+'px';
+      h=`<div class="ctr" style="${fontCss(w,on?w.onColor:w.color)}"><span>${esc(devText(w.text))}</span></div>`;break;}
+    case 'switch':{const on=w.previewOn,d=Math.max(4,w.h-8);st.background=on?w.onBg:w.bg;st.borderRadius=w.h/2+'px';
+      h=`<div class="knob" style="width:${d}px;height:${d}px;top:4px;left:${on?w.w-d-4:4}px;background:${w.knob}"></div>`;break;}
+    case 'slider':{const p=pct(w),d=w.h+10;st.background=w.bg;st.borderRadius=w.h/2+'px';
+      h=`<div class="fill" style="width:${p*100}%;background:${w.onBg};border-radius:${w.h/2}px"></div><div class="knob" style="width:${d}px;height:${d}px;top:-5px;left:calc(${p*100}% - ${d/2}px);background:${w.knob}"></div>`;break;}
+    case 'arc':{const t=+w.thick||10,r=Math.max(1,Math.min(w.w,w.h)/2-t/2),cx=w.w/2,cy=w.h/2,p=pct(w);
+      h=`<svg width="${w.w}" height="${w.h}" viewBox="0 0 ${w.w} ${w.h}"><path d="${arcPath(cx,cy,r,135,405)}" stroke="${w.bg}" stroke-width="${t}" fill="none" stroke-linecap="round"/>`+
+        (p>0.001?`<path d="${arcPath(cx,cy,r,135,135+270*p)}" stroke="${w.onBg}" stroke-width="${t}" fill="none" stroke-linecap="round"/>`:'')+'</svg>'+
+        (w.showValue?`<div class="ctr" style="${fontCss(w)}"><span>${esc(devText(valText({...w,prefix:'',valueType:'number',sample:String(parseFloat(w.sample)*(+w.factor||1))})))}</span></div>`:'');break;}
+    case 'bar':{const p=pct(w);st.background=w.bg;st.borderRadius=w.radius+'px';st.overflow='hidden';
+      h=`<div class="fill" style="width:${p*100}%;background:${w.onBg};border-radius:${w.radius}px"></div>`;break;}
+  }
+  el.innerHTML=h;
+}
+function renderScreen(){
+  const p=page();
+  scr.style.width=S.res.w+'px';scr.style.height=S.res.h+'px';scr.style.background=p.bg;scr.style.transform=`scale(${scale})`;
+  hold.style.width=Math.round(S.res.w*scale)+'px';hold.style.height=Math.round(S.res.h*scale)+'px';
+  let g=+S.snap||8;while(g*scale<8)g*=2;
+  scr.style.setProperty('--g',g+'px');scr.style.setProperty('--inv',(1/scale).toFixed(3));
+  scr.classList.toggle('grid',!!S.grid);
+  scr.innerHTML='';
+  for(const w of p.widgets){
+    const el=document.createElement('div');el.className='w'+(isSel(w.id)?' sel':'');el.dataset.id=w.id;paint(el,w);
+    if(w.id===sel&&!extra.size)for(const k of (isText(w)?['r']:['r','b','br'])){const hd=document.createElement('div');hd.className='h h-'+k;hd.dataset.h=k;el.appendChild(hd);}
+    scr.appendChild(el);
+  }
+  $('#caption').textContent=`${p.id} · ${S.res.w} × ${S.res.h} px · ${Math.round(scale*100)} %`;
+}
+function fit(){
+  if($('#zoomSel').value==='1'){scale=1;renderScreen();return;}
+  const availW=bench.clientWidth-parseFloat(getComputedStyle(bench).paddingLeft)*2-32;
+  const availH=Math.max(240,window.innerHeight*0.66);
+  scale=Math.max(0.2,Math.min(1,availW/S.res.w,availH/S.res.h));
+  renderScreen();
+}
+new ResizeObserver(()=>fit()).observe(bench);
+
+/* ---------- glisser ---------- */
+scr.addEventListener('pointerdown',e=>{
+  const wEl=e.target.closest('.w');
+  if(!wEl){if(sel||extra.size){clearSel();renderScreen();renderInspector();}return;}
+  const w=find(wEl.dataset.id);if(!w)return;
+  const hd=e.target.closest('.h');
+  if(e.shiftKey||e.ctrlKey||e.metaKey){
+    // Ajoute / retire de la selection
+    if(w.id===sel){sel=[...extra][0]||null;extra.delete(sel);}
+    else if(extra.has(w.id))extra.delete(w.id);
+    else if(!sel)sel=w.id;
+    else extra.add(w.id);
+    renderScreen();renderInspector();
+    if(!isSel(w.id)){e.preventDefault();return;}
+  }else if(!isSel(w.id)){selectOnly(w.id);renderScreen();renderInspector();}
+  // Le glisser deplace tous les elements selectionnes ; les poignees redimensionnent le principal
+  const items=selIds().map(id=>{const x=find(id);return {id,ox:x.x,oy:x.y};});
+  drag={mode:hd?hd.dataset.h:'move',sx:e.clientX,sy:e.clientY,ow:w.w,oh:w.h,id:w.id,items};
+  e.preventDefault();
+});
+window.addEventListener('pointermove',e=>{
+  if(!drag)return;const w=find(drag.id);if(!w)return;
+  const dx=(e.clientX-drag.sx)/scale,dy=(e.clientY-drag.sy)/scale;
+  if(drag.mode==='move'){for(const it of drag.items){const x=find(it.id);if(x){x.x=snapv(it.ox+dx);x.y=snapv(it.oy+dy);}}}
+  else{
+    // Poignees d'un element pivote : deplacement ramene dans le repere de l'element
+    const r=(+w.rot||0)*Math.PI/180,c=Math.round(Math.cos(r)),s=Math.round(Math.sin(r));
+    const lx=dx*c+dy*s,ly=-dx*s+dy*c;
+    if(drag.mode.includes('r'))w.w=Math.max(8,snapv(drag.ow+lx));if(drag.mode.includes('b'))w.h=Math.max(8,snapv(drag.oh+ly));
+  }
+  renderScreen();syncGeom(find(sel)||w);
+});
+window.addEventListener('pointerup',()=>{if(drag){drag=null;commit();}});
+function syncGeom(w){for(const k of ['x','y','w','h']){const i=document.getElementById('f_'+k);if(i&&document.activeElement!==i)i.value=w[k];}}
+
+/* ---------- pages et widgets ---------- */
+function renderTabs(){
+  const t=$('#pageTabs');t.innerHTML='';
+  S.pages.forEach((p,i)=>{const b=document.createElement('button');b.className='tab'+(i===S.cur?' on':'');b.textContent=p.id;b.onclick=()=>{S.cur=i;clearSel();renderAll();};t.appendChild(b);});
+  const a=document.createElement('button');a.className='tab add';a.textContent='+ Page';
+  a.onclick=()=>{S.pages.push({id:uid('page'),bg:page().bg,widgets:[]});S.cur=S.pages.length-1;clearSel();renderAll();commit();};
+  t.appendChild(a);
+}
+function buildShelf(){
+  const s=$('#shelf');
+  for(const [t,[name,desc]] of Object.entries(TYPES)){
+    const b=document.createElement('button');b.className='add';b.type='button';
+    b.innerHTML=`<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">${ICON[t]}</svg><b>${name}</b><small>${desc}</small>`;
+    b.onclick=()=>addWidget(t);s.appendChild(b);
+  }
+}
+function addWidget(type){
+  const p=page(),w=Object.assign({type,id:uid(PREFIX[type])},defaults(type));
+  if(w.size!=null)w.size=nearestSize(w.size);
+  const off=(p.widgets.length%6)*16;
+  w.x=snapv(Math.max(0,(S.res.w-w.w)/2+off));w.y=snapv(Math.max(0,(S.res.h-(w.h||60))/2+off));
+  if(type==='action'&&S.pages.length>1){w.target=S.pages.find(x=>x!==p).id;}
+  p.widgets.push(w);selectOnly(w.id);renderScreen();renderInspector();commit();
+}
+function delSel(){
+  const ids=new Set(selIds());if(!ids.size)return;
+  for(const p of S.pages)p.widgets=p.widgets.filter(w=>!ids.has(w.id));
+  clearSel();renderScreen();renderInspector();commit();
+}
+// Pivote chaque element selectionne autour de son propre centre
+function rotateSel(step){
+  const ids=selIds();if(!ids.length)return;
+  for(const id of ids){const w=find(id);w.rot=((((+w.rot||0)+step)%360)+360)%360;}
+  renderScreen();renderInspector();commit();
+}
+function dup(){
+  const items=selIds().map(find);if(!items.length)return;
+  pasteItems(JSON.parse(JSON.stringify(items)),16);
+}
+
+/* ---------- copier / couper / coller ---------- */
+// Format du presse-papiers : {"hapanel":"widgets","items":[...]} en texte JSON.
+// Le systeme (Ctrl+C / Ctrl+V) fonctionne entre onglets et navigateurs ; une
+// copie interne (localStorage) sert aux boutons Copier / Coller.
+const CLIP_KEY='ha-panel-clipboard-v1';
+let clipMem=null;
+function clipPayload(){const items=selIds().map(id=>JSON.parse(JSON.stringify(find(id))));return items.length?{hapanel:'widgets',items}:null;}
+function storeClip(p){clipMem=p;try{localStorage.setItem(CLIP_KEY,JSON.stringify(p));}catch(e){}}
+function readClip(){if(clipMem)return clipMem;try{return JSON.parse(localStorage.getItem(CLIP_KEY)||'null');}catch(e){return null;}}
+function parseClip(text){
+  try{const o=JSON.parse(text);
+    if(o&&o.hapanel==='widgets'&&Array.isArray(o.items))return o;
+    if(o&&o.type&&TYPES[o.type])return {hapanel:'widgets',items:[o]};   // Un element seul
+  }catch(e){}
+  return null;
+}
+function copySel(cut){
+  const p=clipPayload();if(!p)return null;
+  storeClip(p);
+  if(cut)delSel();
+  flashMsg(`${p.items.length} élément${p.items.length>1?'s':''} ${cut?'coupé':'copié'}${p.items.length>1?'s':''}`);
+  return p;
+}
+// Colle des elements dans la page courante. offset : decalage force (dupliquer).
+function pasteItems(items,offset){
+  items=items.filter(w=>w&&TYPES[w.type]);if(!items.length)return;
+  const p=page();
+  // Decale tant qu'un element du meme type occupe deja la meme position
+  let d=offset||0;
+  const occupied=(dx)=>items.some(it=>p.widgets.some(w=>w.type===it.type&&w.x===it.x+dx&&w.y===it.y+dx));
+  if(!offset)while(occupied(d)&&d<16*20)d+=16;
+  const ids=[];
+  for(const src of items){
+    const w=Object.assign(defaults(src.type),JSON.parse(JSON.stringify(src)));
+    w.id=uid(PREFIX[w.type]);
+    w.x=Math.max(0,Math.min(S.res.w-8,w.x+d));w.y=Math.max(0,Math.min(S.res.h-8,w.y+d));
+    if(w.size!=null)w.size=nearestSize(+w.size||20);
+    p.widgets.push(w);ids.push(w.id);
+  }
+  sel=ids[0];extra=new Set(ids.slice(1));
+  renderScreen();renderInspector();commit();
+  flashMsg(`${ids.length} élément${ids.length>1?'s':''} collé${ids.length>1?'s':''} dans ${p.id}`);
+}
+function pasteFromMemory(){const c=readClip();if(c)pasteItems(c.items);else flashMsg('Presse-papiers vide');}
+const isTyping=el=>/^(INPUT|TEXTAREA|SELECT)$/.test(el?.tagName||'')||el?.isContentEditable;
+document.addEventListener('copy',e=>{
+  if(isTyping(document.activeElement)||!modalsClosed())return;
+  const p=copySel(false);if(!p)return;
+  e.clipboardData.setData('text/plain',JSON.stringify(p));e.preventDefault();
+});
+document.addEventListener('cut',e=>{
+  if(isTyping(document.activeElement)||!modalsClosed())return;
+  const p=copySel(true);if(!p)return;
+  e.clipboardData.setData('text/plain',JSON.stringify(p));e.preventDefault();
+});
+document.addEventListener('paste',e=>{
+  if(isTyping(document.activeElement)||!modalsClosed())return;
+  const c=parseClip(e.clipboardData?.getData('text/plain')||'')||readClip();
+  if(!c)return;
+  e.preventDefault();storeClip(c);pasteItems(c.items);
+});
+let flashT=null;
+function flashMsg(t){const el=$('#saveState');if(!el)return;el.textContent=t;el.className='savestate';clearTimeout(flashT);flashT=setTimeout(renderSaveState,1600);}
+const modalsClosed=()=>$('#modal').hidden&&$('#haModal').hidden&&$('#battModal').hidden;
+function layer(dir){const p=pageOf(sel),i=p.widgets.findIndex(w=>w.id===sel),j=i+dir;if(j<0||j>=p.widgets.length)return;[p.widgets[i],p.widgets[j]]=[p.widgets[j],p.widgets[i]];renderScreen();commit();}
+
+/* ---------- inspecteur ---------- */
+const trackish=w=>['switch','slider','arc','bar'].includes(w.type);
+const F={
+  rot:{l:'Rotation',t:'select',num:true,o:[[0,'0°'],[90,'90° (horaire)'],[180,'180°'],[270,'270° (anti-horaire)']],hint:()=>'Autour du centre. X, Y, L et H restent ceux de l\'élément avant rotation.'},
+  text:{l:'Texte',t:'area',hint:w=>devText(w.text)!==String(w.text??'')?'Sur l\'écran : « '+devText(w.text)+' »':''},
+  size:{l:'Taille',t:'select',o:()=>SIZES.map(s=>[s,s+' px'])},
+  color:{l:'Couleur du texte',t:'color'},
+  align:{l:'Alignement',t:'select',o:[['LEFT','Gauche'],['CENTER','Centre'],['RIGHT','Droite']]},
+  bg:{l:w=>trackish(w)?'Piste':'Fond',t:'color'},
+  onBg:{l:w=>w.type==='toggle'?'Couleur active':'Remplissage',t:'color'},
+  onColor:{l:'Texte actif',t:'color'},
+  knob:{l:'Bouton',t:'color'},
+  radius:{l:'Arrondi',t:'num'},
+  borderW:{l:'Bordure',t:'num'},
+  borderColor:{l:'Couleur bordure',t:'color',show:w=>+w.borderW>0},
+  mode:{l:'Au toucher',t:'select',o:[['ha','Action Home Assistant'],['page','Ouvrir une page'],['admin','Ouvrir l\'écran de configuration (IP, Wi-Fi, luminosité)']]},
+  entity:{l:'Entité',t:'entity',ph:'light.cuisine',show:w=>w.type!=='action'||w.mode==='ha',
+    hint:w=>isLocal(w.entity)?'Entité locale de l\'écran':(w.type==='action'?'Facultatif si l\'action n\'a pas besoin d\'entité. screen.backlight allume/éteint l\'écran.':'')},
+  attribute:{l:'Attribut',t:'text',ph:'facultatif',hint:()=>'Lit un attribut au lieu de l\'état, ex. current_temperature'},
+  action:{l:'Action',t:'service',ph:w=>defaultAction(w),show:w=>(w.type!=='action'||w.mode==='ha')&&!isLocal(w.entity),
+    hint:w=>serviceOptions(w)?'Actions de Home Assistant disponibles pour le domaine '+dom(w.entity)+'.':(w.entity?'Liste indisponible : vérifiez la connexion à Home Assistant. Texte libre : domaine.service.':'Choisissez d\'abord une entité.')},
+  field:{l:'Paramètre',t:'select',o:w=>fieldOptions(w),show:w=>w.type==='slider'&&!!w.entity&&!isLocal(w.entity),
+    hint:w=>w.field?'Valeur du curseur envoyée dans « '+w.field+' »':'Vide = brightness (lumière) ou value'},
+  factor:{l:'Facteur',t:'num',show:w=>w.type==='slider'&&!!w.entity&&!isLocal(w.entity),
+    hint:()=>'Valeur envoyée à HA = curseur × facteur (ex. 0,01 : curseur 0 à 100 → volume 0 à 1).'},
+  target:{l:'Page',t:'select',o:()=>S.pages.map(p=>[p.id,p.id]),show:w=>w.mode==='page'},
+  valueType:{l:'L\'état est',t:'select',o:[['number','Un nombre'],['text','Du texte']]},
+  decimals:{l:'Décimales',t:'num',show:w=>w.valueType!=='text'},
+  prefix:{l:'Avant',t:'text'},
+  suffix:{l:'Après',t:'text',ph:'°C'},
+  sample:{l:'Valeur d\'aperçu',t:'text',hint:()=>'Seulement pour cet aperçu'},
+  min:{l:'Min',t:'num'},max:{l:'Max',t:'num',hint:w=>w.entity==='screen.brightness'?'La luminosité de l\'écran va de 0 à 100 %':
+    (autoNote[w.id]?'Plage ajustée automatiquement : '+autoNote[w.id]+'.':(w.type==='slider'&&dom(w.entity)==='light'&&!w.field?'La luminosité d\'une lumière va de 0 à 255':''))},
+  thick:{l:'Épaisseur',t:'num'},
+  previewOn:{l:'Aperçu actif',t:'check'},
+  showValue:{l:'Afficher la valeur',t:'check'}
+};
+const G={
+  tile:[['Apparence',['bg','radius','borderW','borderColor']]],
+  label:[['Texte',['text','size','color','align']]],
+  value:[['Home Assistant',['entity','attribute','valueType','decimals','prefix','suffix','sample']],['Texte',['size','color','align']]],
+  toggle:[['Home Assistant',['entity','action','previewOn']],['Texte',['text','size']],['Apparence',['bg','color','onBg','onColor','radius']]],
+  action:[['Comportement',['mode','entity','action','target']],['Texte',['text','size']],['Apparence',['bg','color','radius']]],
+  switch:[['Home Assistant',['entity','action','previewOn']],['Apparence',['bg','onBg','knob']]],
+  slider:[['Home Assistant',['entity','action','field','min','max','factor','sample']],['Apparence',['bg','onBg','knob']]],
+  arc:[['Home Assistant',['entity','attribute','min','max','sample']],['Valeur au centre',['showValue','decimals','suffix','size','color']],['Apparence',['thick','bg','onBg']]],
+  bar:[['Home Assistant',['entity','attribute','min','max','sample']],['Apparence',['bg','onBg','radius']]]
+};
+function addField(box,obj,k,f,onCh){
+  if(f.show&&!f.show(obj))return;
+  const id='f_'+k,row=document.createElement('div');row.className='fld'+(f.t==='check'?' chk':'');
+  const lab=document.createElement('label');lab.htmlFor=id;lab.textContent=typeof f.l==='function'?f.l(obj):f.l;
+  let inp;
+  // Listes : options [valeur, libelle, desactive?]. Si la liste est indisponible
+  // (null), on retombe sur un champ texte.
+  const opts=f.t==='select'?(typeof f.o==='function'?f.o(obj):f.o):f.t==='service'?serviceOptions(obj):undefined;
+  if(opts){
+    inp=document.createElement('select');
+    if(f.t==='service'){const op=document.createElement('option');op.value='';op.textContent='Par défaut : '+defaultAction(obj);inp.appendChild(op);}
+    for(const [v,t,dis] of opts){const op=document.createElement('option');op.value=v;op.textContent=t;op.disabled=!!dis;inp.appendChild(op);}
+    const cur=obj[k]??(f.num?0:'');
+    if(f.t==='service'&&cur&&!opts.some(o=>o[0]===cur)){const op=document.createElement('option');op.value=cur;op.textContent=cur+' (autre domaine)';inp.appendChild(op);}
+    inp.value=cur;
+  }
+  else if(f.t==='select'||f.t==='service'){inp=document.createElement('input');inp.type='text';inp.value=obj[k]??'';const ph=typeof f.ph==='function'?f.ph(obj):f.ph;if(ph)inp.placeholder=ph;}
+  else if(f.t==='area'){inp=document.createElement('textarea');inp.rows=2;inp.value=obj[k]??'';}
+  else{inp=document.createElement('input');inp.type={num:'number',color:'color',check:'checkbox'}[f.t]||'text';
+    if(f.t==='check')inp.checked=!!obj[k];else inp.value=obj[k]??'';
+    if(f.t==='entity')inp.setAttribute('list','entList');
+    if(f.ph)inp.placeholder=typeof f.ph==='function'?f.ph(obj):f.ph;}
+  inp.id=id;inp.spellcheck=false;
+  const structural=inp.tagName==='SELECT'||f.t==='check';
+  inp.addEventListener(structural?'change':'input',()=>{
+    let v;
+    if(f.t==='check')v=inp.checked;
+    else if(f.t==='num'){v=parseFloat(inp.value);if(isNaN(v))return;}
+    else if(f.t==='select'&&(f.num||typeof obj[k]==='number'))v=+inp.value;
+    else v=inp.value;
+    obj[k]=v;onCh(structural,k);
+  });
+  if(f.t==='entity')inp.addEventListener('change',()=>{const h=row.querySelector('.hint.ent');if(h)h.textContent=entName(obj[k]);});
+  row.append(lab,inp);
+  const hint=typeof f.hint==='function'?f.hint(obj):f.hint;
+  if(hint){const s=document.createElement('div');s.className='hint';s.textContent=hint;row.appendChild(s);}
+  if(f.t==='entity'){const s=document.createElement('div');s.className='hint ent';s.textContent=entName(obj[k]);row.appendChild(s);}
+  if(k==='text'){const s=row.querySelector('.hint');inp.addEventListener('input',()=>{let h=row.querySelector('.hint');const t=F.text.hint(obj);if(!h&&t){h=document.createElement('div');h.className='hint';row.appendChild(h);}if(h)h.textContent=t;});}
+  box.appendChild(row);
+}
+function group(box,title){const g=document.createElement('div');g.className='grp';const h=document.createElement('h2');h.textContent=title;g.appendChild(h);box.appendChild(g);return g;}
+function idField(box,obj,onRename){
+  const row=document.createElement('div');row.className='fld';
+  row.innerHTML='<label for="f_id">Id</label><input type="text" id="f_id" spellcheck="false">';
+  const inp=row.querySelector('input');inp.value=obj.id;
+  inp.addEventListener('change',()=>{let v=slug(inp.value);if(v!==obj.id&&usedIds().has(v))v=uid(v);const old=obj.id;obj.id=v;inp.value=v;onRename(old,v);});
+  box.appendChild(row);
+}
+function renderInspector(){
+  const box=$('#insp');box.innerHTML='';
+  const w=sel&&find(sel);
+  if(!w){inspectPage(box);return;}
+  const multi=extra.size>0;
+  const head=document.createElement('div');head.className='ihead';
+  head.innerHTML=multi
+    ?`<div><h2 style="margin:0 0 2px">Sélection</h2><div class="ty">${selIds().length} éléments</div></div>`
+    :`<div><h2 style="margin:0 0 2px">Élément</h2><div class="ty">${TYPES[w.type][0]}</div></div>`;
+  box.appendChild(head);
+  const acts=document.createElement('div');acts.className='iacts';
+  // execCommand('copy'/'cut') declenche nos gestionnaires : copie aussi dans le presse-papiers du systeme
+  const sysCopy=cut=>{if(!document.execCommand(cut?'cut':'copy'))copySel(cut);};
+  const list=[['Copier',()=>sysCopy(false)],['Couper',()=>sysCopy(true)],['Coller',pasteFromMemory],['Dupliquer',dup],['Pivoter 90°',()=>rotateSel(90)]];
+  if(!multi)list.push(['Avancer',()=>layer(1)],['Reculer',()=>layer(-1)]);
+  list.push(['Supprimer',delSel,'danger']);
+  for(const [label,fn,cls] of list){
+    const b=document.createElement('button');b.className='btn'+(cls?' '+cls:'');b.textContent=label;b.onclick=fn;acts.appendChild(b);}
+  box.appendChild(acts);
+  if(multi){
+    const n=document.createElement('p');n.className='note';
+    n.innerHTML='Glissez pour déplacer tous les éléments sélectionnés, ou utilisez les flèches. <kbd>Maj</kbd>/<kbd>Ctrl</kbd>+clic ajoute ou retire un élément de la sélection.';
+    box.appendChild(n);return;
+  }
+  const onCh=(structural,k)=>{
+    renderScreen();
+    if(structural)renderInspector();
+    else if(k==='entity'){
+      const a=$('#f_action');if(a)a.placeholder=defaultAction(w);
+      // Curseur de luminosite : plage 5..100 proposee automatiquement
+      if(w.entity==='screen.brightness'&&(w.type==='slider'||w.type==='arc'||w.type==='bar')&&+w.max>100){w.min=w.type==='slider'?5:0;w.max=100;w.sample='80';renderScreen();}
+      // Batterie : plage et format adaptes automatiquement
+      if(w.entity==='screen.battery'){
+        if(w.type==='arc'||w.type==='bar'){w.min=0;w.max=100;w.sample='72';}
+        if(w.type==='value'||w.type==='arc'){w.decimals=0;w.suffix='%';w.valueType='number';if(w.type==='value')w.sample='72';}
+        renderScreen();
+      }
+      if(w.entity==='screen.battery_voltage'){
+        // Jauge / barre en centiemes de volt (3,00 a 4,20 V) : la tension est divisee par le facteur 0,01
+        if(w.type==='arc'||w.type==='bar'){w.factor=0.01;w.min=300;w.max=420;w.sample='380';}
+        if(w.type==='value'||w.type==='arc'){w.decimals=2;w.suffix=' V';w.valueType='number';if(w.type==='value')w.sample='3.82';}
+        renderScreen();
+      }
+    }
+    if(k==='min'||k==='max')delete autoNote[w.id];
+    commit();
+    if(w.type==='slider'&&k==='action')onActionChanged(w);
+    if(w.type==='slider'&&k==='field')onFieldChanged(w);
+  };
+  // Les champs dependant de l'entite (action, min/max) se mettent a jour quand on quitte le champ
+  setTimeout(()=>{const e=$('#f_entity');if(e)e.addEventListener('change',()=>{renderInspector();autoConfigure(w);});},0);
+  const g0=group(box,'Position et taille');
+  idField(g0,w,(o,n)=>{sel=n;renderScreen();commit();});
+  const geo=document.createElement('div');geo.className='geo';g0.appendChild(geo);
+  for(const [k,l] of [['x','X'],['y','Y'],['w','L'],['h','H']]){if(k==='h'&&isText(w))continue;addField(geo,w,k,{l,t:'num'},onCh);}
+  addField(g0,w,'rot',F.rot,onCh);
+  for(const [title,keys] of G[w.type]){const g=group(box,title);for(const k of keys)addField(g,w,k,F[k],onCh);}
+}
+function inspectPage(box){
+  const p=page();
+  const g=group(box,'Page');
+  idField(g,p,(o,n)=>{allW().forEach(x=>{if(x.target===o)x.target=n;});renderTabs();renderScreen();commit();});
+  addField(g,p,'bg',{l:'Fond',t:'color'},()=>{renderScreen();commit();});
+  if(S.pages.length>1){const b=document.createElement('button');b.className='btn danger';b.textContent='Supprimer cette page';
+    b.onclick=()=>{S.pages.splice(S.cur,1);S.cur=Math.max(0,S.cur-1);renderAll();commit();};g.appendChild(b);}
+  const s=group(box,'Écran');
+  const n0=document.createElement('p');n0.className='note';n0.textContent=`Résolution : ${S.res.w} × ${S.res.h} px. La première page s'affiche au démarrage.`;s.appendChild(n0);
+  const n=document.createElement('p');n.className='note';n.textContent='Cliquez sur un élément pour le modifier, ou ajoutez-en un depuis la liste de gauche.';box.appendChild(n);
+  const c=readClip();
+  if(c&&c.items&&c.items.length){
+    const b=document.createElement('button');b.className='btn';b.style.marginTop='10px';
+    b.textContent=`Coller ${c.items.length} élément${c.items.length>1?'s':''} dans cette page`;b.onclick=pasteFromMemory;box.appendChild(b);
+  }
+}
+
+/* ---------- verifications ---------- */
+// Encombrement reel a l'ecran (apres rotation autour du centre)
+function vbox(w){
+  let h=w.h;
+  if(isText(w)){const el=scr.querySelector(`.w[data-id="${CSS.escape(w.id)}"]`);h=el?el.offsetHeight:(LH[nearestSize(+w.size||20)]||20);}
+  const q=(((+w.rot||0)%180)+180)%180!==0,cx=w.x+w.w/2,cy=w.y+h/2,bw=q?h:w.w,bh=q?w.w:h;
+  return {x:cx-bw/2,y:cy-bh/2,w:bw,h:bh};
+}
+function checks(){
+  const out=[];const W=(m,cls)=>out.push({m,cls:cls||''});
+  const pageIds=new Set(S.pages.map(p=>p.id));
+  const count=new Map();for(const id of [...S.pages.map(p=>p.id),...allW().map(w=>w.id)])count.set(id,(count.get(id)||0)+1);
+  for(const [id,n] of count)if(n>1)W(`L'id <code>${esc(id)}</code> est utilisé ${n} fois. Chaque élément et chaque page doit avoir son propre id.`);
+  const needsEnt=['value','toggle','switch','slider','arc','bar'];
+  for(const w of allW()){
+    const b=vbox(w);
+    if(b.x<-0.5||b.y<-0.5||b.x+b.w>S.res.w+0.5||b.y+b.h>S.res.h+0.5)W(`<code>${esc(w.id)}</code> dépasse du bord de l'écran${+w.rot?' (en tenant compte de la rotation)':''}.`);
+    if(w.entity&&!/^[a-z_]+\.[a-z0-9_]+$/.test(w.entity))W(`<code>${esc(w.id)}</code> : entrez un id d'entité complet, comme <code>light.cuisine</code>.`);
+    else if(needsEnt.includes(w.type)&&!w.entity)W(`<code>${esc(w.id)}</code> : aucune entité, l'élément restera inactif.`);
+    if(w.type==='action'){
+      if(w.mode==='page'&&!pageIds.has(w.target))W(`<code>${esc(w.id)}</code> : choisissez la page à ouvrir.`);
+      if(w.mode==='ha'&&!w.entity&&!w.action)W(`<code>${esc(w.id)}</code> : indiquez une entité ou une action.`);
+    }
+    if(isLocal(w.entity)){
+      if(!LOCAL_ENT.some(e=>e[0]===w.entity))W(`<code>${esc(w.id)}</code> : entité d'écran inconnue. Choisissez-en une dans la liste (<code>screen.…</code>).`);
+      else if(READONLY_LOCAL.includes(w.entity)&&['toggle','switch','slider','action'].includes(w.type))W(`<code>${esc(w.id)}</code> : <code>${esc(w.entity)}</code> est en lecture seule. Utilisez une valeur, une jauge ou une barre.`);
+      else if(READONLY_LOCAL.includes(w.entity)&&!BATT_ON)W(`<code>${esc(w.id)}</code> : la mesure de la batterie est désactivée, l'élément affichera « -- ». Voir le bouton Batterie.`,'info');
+      else if(w.entity==='screen.brightness'&&w.max!=null&&(+w.max>100||+w.min<0))W(`<code>${esc(w.id)}</code> : la luminosité de l'écran va de 0 à 100. Réglez Min/Max en conséquence.`);
+    }
+    for(const t of [w.text,w.prefix,w.suffix]){
+      if(t==null||t==='')continue;const d=devText(t);
+      if(d.includes('?')&&!String(t).includes('?'))W(`<code>${esc(w.id)}</code> : certains caractères de « ${esc(t)} » n'existent pas dans la police et s'afficheront « ? ».`);
+      else if(d!==String(t))W(`<code>${esc(w.id)}</code> : « ${esc(t)} » s'affichera « ${esc(d)} » (police sans accents).`,'info');
+    }
+  }
+  if(!out.length)W('Aucun problème détecté.','none');
+  return out;
+}
+function renderChecks(){$('#warns').innerHTML=checks().map(c=>`<li class="${c.cls}">${c.m}</li>`).join('');}
+
+/* ---------- enregistrement sur l'ecran ---------- */
+function renderSaveState(){
+  const el=$('#saveState');
+  if(!ONLINE){el.className='savestate err';el.textContent='Hors ligne : ouvrez cette page depuis l\'écran pour enregistrer';$('#saveBtn').disabled=true;return;}
+  $('#saveBtn').disabled=false;
+  if(savedKey===layoutKey(S)){el.className='savestate ok';el.textContent='✓ Enregistré sur l\'écran';}
+  else{el.className='savestate dirty';el.textContent='● Modifications non enregistrées';}
+}
+async function api(path,opt){
+  const r=await fetch(path,opt);let j=null;try{j=await r.json();}catch(e){}
+  // Session expiree (l'ecran a redemarre : nouveau mot de passe) -> page de connexion.
+  // Le brouillon est conserve dans le navigateur.
+  if(r.status===401){goLogin();throw new Error('Session expirée');}
+  if(!r.ok)throw new Error((j&&j.message)||('HTTP '+r.status));return j;
+}
+const post=(path,body)=>api(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+$('#saveBtn').onclick=async()=>{
+  const b=$('#saveBtn'),el=$('#saveState');b.disabled=true;el.className='savestate';el.textContent='Envoi…';
+  try{const body={...S,cur:0};await post('/api/layout',body);savedKey=layoutKey(S);try{localStorage.removeItem(DRAFT_KEY);}catch(e){}renderSaveState();}
+  catch(e){el.className='savestate err';el.textContent='Échec : '+e.message;}
+  finally{b.disabled=false;}
+};
+
+/* ---------- Home Assistant ---------- */
+let ENT=new Map(LOCAL_ENT);
+const entName=id=>ENT.get(id)||'';
+function fillEntList(list){
+  const all=[...LOCAL_ENT.map(([id,name])=>({id,name})),...list];
+  ENT=new Map(all.map(e=>[e.id,e.name]));
+  $('#entList').innerHTML=all.map(e=>`<option value="${esc(e.id)}">${esc(e.name)}</option>`).join('');
+}
+fillEntList([]);
+
+/* ---------- actions Home Assistant par domaine ---------- */
+// SVC = {domaine: {service: {n: nom, f: {parametre: [min, max]}, r: 1 si autres parametres requis}}}
+let SVC=null;
+let autoNote={};   // Explication de la derniere plage min/max ajustee automatiquement, par element
+async function loadServices(){try{SVC=await api('/api/ha/services');}catch(e){SVC=null;}}
+const svcOf=name=>{if(!SVC||!name||!name.includes('.'))return null;const [d,s]=name.split('.');return SVC[d]?.[s]||null;};
+
+// Curseurs : action, parametre et attribut lu par defaut selon le domaine.
+// minA/maxA : attributs de l'entite qui donnent la plage reelle.
+const SLIDER_PRESET={
+  light:{svc:'light.turn_on',field:'brightness',attr:'brightness',min:0,max:255},
+  cover:{svc:'cover.set_cover_position',field:'position',attr:'current_position',min:0,max:100},
+  valve:{svc:'valve.set_valve_position',field:'position',attr:'current_position',min:0,max:100},
+  fan:{svc:'fan.set_percentage',field:'percentage',attr:'percentage',min:0,max:100},
+  media_player:{svc:'media_player.volume_set',field:'volume_level',attr:'volume_level',min:0,max:100,factor:0.01},
+  climate:{svc:'climate.set_temperature',field:'temperature',attr:'temperature',minA:'min_temp',maxA:'max_temp',min:7,max:35},
+  water_heater:{svc:'water_heater.set_temperature',field:'temperature',attr:'temperature',minA:'min_temp',maxA:'max_temp',min:30,max:70},
+  humidifier:{svc:'humidifier.set_humidity',field:'humidity',attr:'humidity',minA:'min_humidity',maxA:'max_humidity',min:0,max:100},
+  input_number:{svc:'input_number.set_value',field:'value',attr:'',minA:'min',maxA:'max',min:0,max:100},
+  number:{svc:'number.set_value',field:'value',attr:'',minA:'min',maxA:'max',min:0,max:100}
+};
+
+// Actions proposees pour l'entite de l'element (seulement son domaine).
+// Curseur : seulement les actions qui ont un parametre numerique.
+// Boutons : les actions qui exigent d'autres parametres sont grisees.
+function serviceOptions(w){
+  const d=dom(w.entity);
+  if(!SVC||!d||isLocal(w.entity)||!SVC[d])return null;
+  const slider=w.type==='slider',opts=[];
+  const add=(name,info)=>{
+    if(slider&&!Object.keys(info.f||{}).length)return;
+    const needs=!slider&&info.r;
+    opts.push([name,`${name} — ${info.n}${needs?' (paramètres requis)':''}`,needs]);
+  };
+  for(const s of Object.keys(SVC[d]).sort())add(`${d}.${s}`,SVC[d][s]);
+  if(!slider&&SVC.homeassistant)for(const s of ['toggle','turn_on','turn_off'])if(SVC.homeassistant[s])add(`homeassistant.${s}`,SVC.homeassistant[s]);
+  return opts;
+}
+// Parametres numeriques de l'action choisie pour un curseur
+function fieldOptions(w){
+  const info=svcOf(w.action||defaultAction(w));
+  if(!info)return null;
+  const list=Object.entries(info.f||{}).map(([k,b])=>[k,k+(b[0]!=null&&b[1]!=null?` (${b[0]} à ${b[1]})`:'')]);
+  if(w.field&&!list.some(o=>o[0]===w.field))list.push([w.field,w.field]);
+  if(!w.field)list.unshift(['','(défaut)']);
+  return list;
+}
+async function entityAttrs(id){try{return (await api('/api/ha/state?id='+encodeURIComponent(id))).attributes||{};}catch(e){return null;}}
+function setRange(w,min,max,why){
+  if(!isFinite(min)||!isFinite(max)||!(max>min))return false;
+  w.min=min;w.max=max;autoNote[w.id]=`${min} à ${max} (${why})`;
+  const s=parseFloat(w.sample);if(isNaN(s)||s<min||s>max)w.sample=String(Math.round(min+(max-min)*0.6));
+  return true;
+}
+// Ajuste min/max d'un curseur selon son parametre. Priorite :
+//  1) attributs de l'entite (input_number min/max, climate min_temp/max_temp...)
+//  2) bornes du parametre declarees par Home Assistant
+//  3) valeurs usuelles du domaine
+function applyFieldBounds(w,attrs){
+  const d=dom(w.entity),p=SLIDER_PRESET[d],fac=+w.factor||1;
+  if(attrs&&p&&p.field===w.field&&p.minA&&attrs[p.minA]!=null&&attrs[p.maxA]!=null&&
+     setRange(w,Math.floor(+attrs[p.minA]/fac),Math.ceil(+attrs[p.maxA]/fac),`attributs ${p.minA}/${p.maxA} de l'entité`))return;
+  const info=svcOf(w.action||defaultAction(w)),b=info&&info.f&&info.f[w.field];
+  if(b&&b[0]!=null&&b[1]!=null){
+    let [mn,mx]=b;
+    if(mx<=1){w.factor=0.01;mn=Math.round(mn*100);mx=Math.round(mx*100);}   // Ex. volume 0 a 1
+    else if(!(p&&p.field===w.field&&p.factor))w.factor=1;
+    if(setRange(w,mn,mx,`bornes de ${w.field} dans ${w.action||defaultAction(w)}`))return;
+  }
+  if(p&&p.field===w.field){w.factor=p.factor||1;setRange(w,p.min,p.max,'valeurs usuelles '+d);}
+}
+// Nouvelle entite : choisit action, parametre et plage (curseur), ou la plage (jauge, barre)
+async function autoConfigure(w){
+  if(!ONLINE||!w.entity||isLocal(w.entity)||!['slider','arc','bar'].includes(w.type))return;
+  const d=dom(w.entity),attrs=await entityAttrs(w.entity);
+  if(w.type==='slider'){
+    const p=SLIDER_PRESET[d];
+    if(p){w.action=p.svc;w.field=p.field;w.attribute=p.attr;w.factor=p.factor||1;}
+    else{const opts=serviceOptions(w);
+      if(opts&&opts.length){w.action=opts[0][0];w.field=Object.keys(svcOf(w.action).f)[0]||'';w.attribute='';w.factor=1;}}
+    applyFieldBounds(w,attrs);
+  }else if(attrs){
+    if(attrs.min!=null&&attrs.max!=null)setRange(w,+attrs.min,+attrs.max,'attributs min/max de l\'entité');
+    else if(attrs.unit_of_measurement==='%')setRange(w,0,100,'unité %');
+  }
+  renderScreen();renderInspector();commit();
+}
+// Action changee sur un curseur : prend son parametre numerique le plus pertinent
+async function onActionChanged(w){
+  const info=svcOf(w.action||defaultAction(w));if(!info)return;
+  const fields=Object.keys(info.f||{}),p=SLIDER_PRESET[dom(w.entity)];
+  w.field=(p&&fields.includes(p.field))?p.field:(fields.find(f=>info.f[f][0]!=null&&info.f[f][1]!=null)||fields[0]||'');
+  await onFieldChanged(w);
+}
+async function onFieldChanged(w){
+  const p=SLIDER_PRESET[dom(w.entity)];
+  // L'attribut lu n'est fiable que pour le parametre prevu du domaine
+  w.attribute=(p&&p.field===w.field)?p.attr:'';
+  w.factor=(p&&p.field===w.field&&p.factor)?p.factor:1;
+  applyFieldBounds(w,await entityAttrs(w.entity));
+  renderScreen();renderInspector();commit();
+}
+
+/* ---------- batterie ---------- */
+let BATT_ON=false,battTimer=null;
+function showBatt(b){
+  BATT_ON=!!b.enabled;
+  $('#battNow').textContent=!b.enabled?'Mesure désactivée.':(b.valid?`Mesure actuelle : ${b.voltage.toFixed(2)} V, environ ${b.percent} %`:'Mesure active, mais tension invalide : vérifiez le câblage et le rapport.');
+}
+async function loadBatt(fill){try{const b=await api('/api/battery');showBatt(b);if(fill){$('#battEn').checked=b.enabled;$('#battRatio').value=b.ratio;}return b;}catch(e){}}
+$('#battBtn').onclick=()=>{$('#battMsg').textContent='';$('#battModal').hidden=false;loadBatt(true);clearInterval(battTimer);battTimer=setInterval(()=>loadBatt(false),2000);};
+const closeBatt=()=>{$('#battModal').hidden=true;clearInterval(battTimer);renderChecks();};
+$('#battClose').onclick=closeBatt;
+$('#battModal').addEventListener('click',e=>{if(e.target===$('#battModal'))closeBatt();});
+$('#battSave').onclick=async()=>{const m=$('#battMsg');
+  try{const b=await post('/api/battery',{enabled:$('#battEn').checked,ratio:parseFloat($('#battRatio').value)||2});showBatt(b);m.className='msg ok';m.textContent='Enregistré.';renderChecks();}
+  catch(e){m.className='msg err';m.textContent=e.message;}};
+
+/* ---------- luminosite de l'ecran ---------- */
+const bRange=$('#brightRange'),bVal=$('#brightVal');
+let bTimer=null,bDragging=false;
+function showBright(v){bVal.textContent=v===0?'éteint':v+' %';}
+async function loadBright(){
+  if(!ONLINE||bDragging)return;
+  try{const b=await api('/api/brightness');bRange.value=b.value;showBright(b.value);}catch(e){}
+}
+bRange.addEventListener('input',()=>{
+  bDragging=true;const v=+bRange.value;showBright(v);
+  clearTimeout(bTimer);bTimer=setTimeout(()=>post('/api/brightness',{value:v}).catch(()=>{}),120);
+});
+bRange.addEventListener('change',()=>{bDragging=false;});
+function setDot(el,status){el.className='dot '+({ok:'ok',error:'bad',connecting:'wait',not_configured:'wait'}[status]||'');}
+async function refreshHa(){
+  if(!ONLINE)return;
+  try{const h=await api('/api/ha');setDot($('#haDot'),h.status);setDot($('#haDot2'),h.status);$('#haStatus').textContent=h.message;
+    if(document.activeElement!==$('#haUrl')&&!$('#haUrl').value)$('#haUrl').value=h.url||'';
+    $('#haTok').placeholder=h.has_token?'Jeton enregistré (laisser vide pour le conserver)':'Collez le jeton ici';
+    $('#haTokHint').textContent=h.has_token?'Un jeton est déjà enregistré sur l\'écran. Il n\'est jamais renvoyé au navigateur.':'';
+    return h;}catch(e){$('#haStatus').textContent='Erreur : '+e.message;}
+}
+async function loadEntities(showMsg){
+  const m=$('#haMsg');if(showMsg){m.className='msg';m.textContent='Chargement des entités…';}
+  try{const list=await api('/api/ha/entities');fillEntList(list);await loadServices();
+    if(showMsg){m.className='msg ok';m.textContent=list.length+' entités disponibles dans les champs « Entité ».';}
+    renderInspector();
+  }catch(e){if(showMsg){m.className='msg err';m.textContent='Entités : '+e.message;}}
+}
+async function loadApiKey(){try{const k=await api('/api/apikey');$('#apiKey').value=k.key;}catch(e){}}
+$('#haBtn').onclick=()=>{$('#haMsg').textContent='';$('#haModal').hidden=false;refreshHa();loadApiKey();$('#haUrl').focus();};
+$('#apiCopy').onclick=()=>{const i=$('#apiKey');i.focus();i.select();const ok=document.execCommand('copy');const m=$('#haMsg');m.className='msg'+(ok?' ok':'');m.textContent=ok?'Clé copiée.':'Clé sélectionnée : Ctrl+C pour copier.';};
+$('#apiRegen').onclick=async()=>{
+  if(!confirm('Générer une nouvelle clé ? L\'ancienne ne fonctionnera plus dans Home Assistant.'))return;
+  try{const k=await post('/api/apikey',{});$('#apiKey').value=k.key;const m=$('#haMsg');m.className='msg ok';m.textContent='Nouvelle clé générée. Mettez à jour Home Assistant.';}catch(e){}
+};
+$('#logoutBtn').onclick=async()=>{try{await post('/api/logout',{});}catch(e){}goLogin();};
+$('#haClose').onclick=()=>{$('#haModal').hidden=true;};
+$('#haModal').addEventListener('click',e=>{if(e.target===$('#haModal'))$('#haModal').hidden=true;});
+$('#haTest').onclick=async()=>{const m=$('#haMsg');m.className='msg';m.textContent='Test en cours…';
+  try{const r=await post('/api/ha/test',{url:$('#haUrl').value,token:$('#haTok').value});m.className='msg '+(r.ok?'ok':'err');m.textContent=r.message;}
+  catch(e){m.className='msg err';m.textContent=e.message;}};
+$('#haSave').onclick=async()=>{const m=$('#haMsg');m.className='msg';m.textContent='Enregistrement…';
+  try{await post('/api/ha',{url:$('#haUrl').value,token:$('#haTok').value});$('#haTok').value='';m.className='msg ok';m.textContent='Enregistré.';
+    setTimeout(refreshHa,1500);loadEntities(false);}
+  catch(e){m.className='msg err';m.textContent=e.message;}};
+$('#haEnt').onclick=()=>loadEntities(true);
+
+/* ---------- divers ---------- */
+function renderAll(){renderTabs();$('#snapSel').value=String(S.snap||0);$('#gridChk').checked=!!S.grid;fit();renderInspector();renderChecks();renderSaveState();$('#undoBtn').disabled=!undoStack.length;}
+$('#snapSel').onchange=e=>{S.snap=+e.target.value;renderScreen();commit();};
+$('#gridChk').onchange=e=>{S.grid=e.target.checked;renderScreen();commit();};
+$('#zoomSel').onchange=()=>fit();
+$('#undoBtn').onclick=undo;
+const modal=$('#modal'),ptxt=$('#projTxt'),pmsg=$('#projMsg');
+$('#projBtn').onclick=()=>{ptxt.value=JSON.stringify(S,null,1);pmsg.textContent='';modal.hidden=false;ptxt.focus();ptxt.select();};
+$('#projClose').onclick=()=>{modal.hidden=true;};
+modal.addEventListener('click',e=>{if(e.target===modal)modal.hidden=true;});
+$('#projCopy').onclick=()=>{navigator.clipboard.writeText(ptxt.value).then(()=>pmsg.textContent='Copié.',()=>{ptxt.focus();ptxt.select();pmsg.textContent='Texte sélectionné. Appuyez sur Ctrl+C.';});};
+function replace(o,msg){S=normalize(o);clearSel();renderAll();commit();ptxt.value=JSON.stringify(S,null,1);pmsg.textContent=msg;}
+$('#projLoad').onclick=()=>{try{const o=JSON.parse(ptxt.value);if(!o||!Array.isArray(o.pages)||!o.pages.length)throw 0;replace(o,'Chargé. Pensez à l\'enregistrer sur l\'écran.');}catch(e){pmsg.textContent='Ce texte n\'est pas un projet de ce designer. Collez-le en entier, en commençant par {.';}};
+$('#projExample').onclick=()=>replace(sample(),'Exemple chargé. « Annuler » restaure votre projet.');
+$('#projBlank').onclick=()=>replace(blank(),'Projet vide prêt. « Annuler » restaure votre projet.');
+function download(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);}
+$('#projSave').onclick=()=>{download('panneau-ha.json',JSON.stringify(S,null,1),'application/json');pmsg.textContent='panneau-ha.json enregistré dans vos téléchargements.';};
+$('#projOpen').onclick=()=>$('#projFile').click();
+$('#projFile').onchange=e=>{const f=e.target.files[0];if(!f)return;f.text().then(t=>{ptxt.value=t;$('#projLoad').click();e.target.value='';});};
+
+document.addEventListener('keydown',e=>{
+  if(!modalsClosed()){if(e.key==='Escape'){modal.hidden=true;$('#haModal').hidden=true;if(!$('#battModal').hidden)closeBatt();}return;}
+  const typing=/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName),mod=e.ctrlKey||e.metaKey;
+  if(mod&&e.key.toLowerCase()==='z'&&!typing){e.preventDefault();undo();return;}
+  if(typing)return;
+  if(mod&&e.key.toLowerCase()==='a'){   // Tout selectionner dans la page
+    e.preventDefault();const ids=page().widgets.map(w=>w.id);if(!ids.length)return;
+    sel=ids[0];extra=new Set(ids.slice(1));renderScreen();renderInspector();return;
+  }
+  // Ctrl+C / Ctrl+X / Ctrl+V : geres par les evenements copy / cut / paste
+  if(!sel)return;
+  const w=find(sel);if(!w)return;
+  if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();delSel();}
+  else if(e.key==='Escape'){clearSel();renderScreen();renderInspector();}
+  else if(mod&&e.key.toLowerCase()==='d'){e.preventDefault();dup();}
+  else if(!mod&&e.key.toLowerCase()==='r'){e.preventDefault();rotateSel(e.shiftKey?-90:90);}
+  else if(e.key.startsWith('Arrow')){
+    e.preventDefault();const st=e.shiftKey?(+S.snap||8):1;
+    for(const id of selIds()){const x=find(id);
+      if(e.key==='ArrowLeft')x.x-=st;if(e.key==='ArrowRight')x.x+=st;if(e.key==='ArrowUp')x.y-=st;if(e.key==='ArrowDown')x.y+=st;}
+    renderScreen();syncGeom(w);commit();
+  }
+});
+// Retour a la page de connexion : le brouillon reste dans le navigateur et sera propose ensuite
+let leaving=false;
+function goLogin(){leaving=true;saveDraft();location.reload();}
+window.addEventListener('beforeunload',e=>{if(!leaving&&ONLINE&&savedKey!==layoutKey(S)){e.preventDefault();e.returnValue='';}});
+
+/* ---------- demarrage ---------- */
+async function init(){
+  buildShelf();
+  let device=null,draft=null;
+  try{draft=JSON.parse(localStorage.getItem(DRAFT_KEY)||'null');}catch(e){}
+  try{
+    const info=await api('/api/info');ONLINE=true;
+    RES={w:info.width,h:info.height};if(Array.isArray(info.fonts)&&info.fonts.length)SIZES=info.fonts.filter(s=>LH[s]);
+    $('#devName').textContent=`${info.hostname} · ${info.ip}`;
+    device=await api('/api/layout');
+  }catch(e){ONLINE=false;}
+  if(device&&Array.isArray(device.pages)&&device.pages.length){
+    S=normalize(device);savedKey=layoutKey(S);
+    if(draft&&Array.isArray(draft.pages)&&layoutKey(normalize(draft))!==savedKey)$('#draftBanner').hidden=false;
+  }else if(draft&&Array.isArray(draft.pages)&&draft.pages.length){S=normalize(draft);}
+  else S=sample();
+  lastSnap=JSON.stringify(S);
+  renderAll();
+  if(ONLINE){
+    loadBright();
+    loadBatt(false).then(()=>renderChecks());
+    const h=await refreshHa();if(h&&h.status!=='not_configured')loadEntities(false);
+    setInterval(()=>{refreshHa();loadBright();},10000);
+  }
+  else{$('#haBtn').disabled=true;$('#battBtn').disabled=true;bRange.disabled=true;$('#logoutBtn').hidden=true;}
+}
+$('#draftRestore').onclick=()=>{try{const d=JSON.parse(localStorage.getItem(DRAFT_KEY));S=normalize(d);clearSel();renderAll();commit();}catch(e){}$('#draftBanner').hidden=true;};
+$('#draftDrop').onclick=()=>{try{localStorage.removeItem(DRAFT_KEY);}catch(e){}$('#draftBanner').hidden=true;};
+init();
+})();
+</script>
+</body>
+</html>
+)HTMLPAGE";
+
+static const char LOGIN_HTML[] PROGMEM = R"HTMLPAGE(<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Panneau HA</title>
+<meta name="description" content="Connexion a la configuration du panneau Home Assistant.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='6' width='28' height='20' rx='4' fill='%230E1013'/%3E%3Crect x='6' y='10' width='9' height='12' rx='2' fill='%23F2B233'/%3E%3Crect x='17' y='10' width='9' height='5' rx='1.5' fill='%234FA3E0'/%3E%3Crect x='17' y='17' width='9' height='5' rx='1.5' fill='%234CAF7A'/%3E%3C/svg%3E">
+<style>
+:root{--bg:#EDF0F4;--panel:#FFFFFF;--line:#D3DAE3;--fg:#1A2130;--muted:#5A6577;--accent:#A86200;--accent-fg:#FFFFFF;--warn:#A8321F;--sel:#2F6FE0}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#12151A;--panel:#191D24;--line:#2B313B;--fg:#E4E8EF;--muted:#97A1B1;--accent:#F0B043;--accent-fg:#1A1406;--warn:#FF8C78;--sel:#5B93FF;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#12151A;--panel:#191D24;--line:#2B313B;--fg:#E4E8EF;--muted:#97A1B1;--accent:#F0B043;--accent-fg:#1A1406;--warn:#FF8C78;--sel:#5B93FF;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+form{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:28px 24px;width:min(380px,100%);display:flex;flex-direction:column;gap:14px}
+h1{margin:0;font-size:20px}
+p{margin:0;color:var(--muted);font-size:13.5px}
+input{font:600 30px/1 ui-monospace,Consolas,monospace;letter-spacing:.35em;text-align:center;padding:12px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);width:100%}
+input:focus-visible,button:focus-visible{outline:2px solid var(--sel);outline-offset:2px}
+button{font:inherit;font-weight:600;padding:10px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-fg);cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+.err{color:var(--warn);font-size:13.5px;min-height:1.5em}
+</style>
+</head>
+<body>
+<form id="f" autocomplete="off">
+  <h1>Panneau HA</h1>
+  <p>Entrez le mot de passe à 6 chiffres affiché sur l'écran « Connecté » du panneau. Il change à chaque démarrage.</p>
+  <label for="pin" style="position:absolute;left:-9999px">Mot de passe</label>
+  <input id="pin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required autofocus>
+  <button id="go" type="submit">Se connecter</button>
+  <div class="err" id="err" role="alert"></div>
+</form>
+<script>
+const f=document.getElementById('f'),pin=document.getElementById('pin'),err=document.getElementById('err'),go=document.getElementById('go');
+pin.addEventListener('input',()=>{pin.value=pin.value.replace(/\D/g,'').slice(0,6);err.textContent='';if(pin.value.length===6)f.requestSubmit();});
+f.addEventListener('submit',async e=>{
+  e.preventDefault();if(pin.value.length!==6){err.textContent='6 chiffres requis.';return;}
+  go.disabled=true;err.textContent='';
+  try{
+    const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin:pin.value})});
+    if(r.ok){location.reload();return;}
+    let m='Échec de la connexion.';try{m=(await r.json()).message||m;}catch(_){}
+    err.textContent=m;pin.value='';pin.focus();
+  }catch(_){err.textContent='Panneau injoignable.';}
+  finally{go.disabled=false;}
+});
+</script>
+</body>
+</html>
+)HTMLPAGE";

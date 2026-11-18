@@ -1,0 +1,13 @@
+﻿Firmware HomeAssistant7 compile le 2026-11-17 22:04
+Carte : ESP32S3 Dev Module, PSRAM OPI, Flash 16 Mo, partition app3M_fat9M_16MB, USB CDC On Boot active.
+
+Flasher (carte sur le port USB, COMx a adapter), puis appuyer sur RESET :
+
+esptool --chip esp32s3 --port COM14 --baud 921600 write-flash -z ^
+  0x0     HomeAssistant7.ino.bootloader.bin ^
+  0x8000  HomeAssistant7.ino.partitions.bin ^
+  0xe000  boot_app0.bin ^
+  0x10000 HomeAssistant7.ino.bin
+
+esptool se trouve dans %LOCALAPPDATA%\Arduino15\packages\esp32\tools\esptool_py\5.3.1\esptool.exe
+La partition FFat (tableau de bord) et la NVS (Wi-Fi, Home Assistant) ne sont pas effacees.
