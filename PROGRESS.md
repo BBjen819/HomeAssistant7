@@ -21,6 +21,9 @@ Elles ont été testées dans le navigateur ou seulement compilées.
 - **Luminosité** : voile logiciel, et 0 % = rétroéclairage éteint. Entités `screen.brightness` et `screen.backlight`.
 - **Bouton d'action « Ouvrir l'écran de configuration »**.
 - **Clé API** : accès à `/api/brightness` et `/api/battery` pour Home Assistant.
+- **Caméras HA** (2026-11-18) : élément « Caméra » avec rafraîchissement, cadrage et plein écran au toucher. Aperçu réel dans le designer.
+  - Designer testé dans Edge headless. Firmware compilé et téléversé, **pas encore vérifié avec une vraie caméra**.
+  - À surveiller : l'ordre des couleurs (rouge et bleu inversés ?), la vitesse en images par seconde et un éventuel scintillement dû à la PSRAM.
 - **Mesure de batterie optionnelle** sur GPIO6 : entités `screen.battery` et `screen.battery_voltage`.
   - Demande un pont diviseur à câbler, et est désactivée par défaut.
 

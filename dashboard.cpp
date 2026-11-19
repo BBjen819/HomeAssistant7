@@ -4,6 +4,7 @@
 #include "web_config.h"
 #include "backlight.h"
 #include "battery.h"
+#include "camera.h"
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <vector>
@@ -18,7 +19,13 @@ struct Bind {
   int decimals = 0;
   int32_t min = 0, max = 100;
   lv_obj_t *obj = nullptr;
-  lv_obj_t *lbl = nullptr;   // Libelle de valeur (jauge)
+  lv_obj_t *lbl = nullptr;   // Libelle de valeur (jauge) ou message (camera)
+  // Camera
+  int cam = -1;              // Emplacement camera.cpp
+  lv_obj_t *img = nullptr;
+  lv_obj_t *page = nullptr;  // Ecran (page) qui contient le widget
+  uint32_t interval = 1000;
+  bool full = true;          // Plein ecran au toucher
 };
 
 struct Page {
@@ -35,6 +42,13 @@ static int s_long_count = 0;
 static uint32_t s_last_dot = 0;
 static uint32_t s_bl_version = 0;
 static uint32_t s_batt_version = 0;
+static std::vector<size_t> s_cams;   // Index des widgets camera dans s_binds
+
+// Camera en plein ecran (ouverte en touchant un widget camera)
+static lv_obj_t *s_full = nullptr, *s_full_img = nullptr, *s_full_lbl = nullptr;
+static int s_full_cam = -1;
+
+static void solid_bg(lv_obj_t *o, lv_color_t c, lv_style_selector_t sel = 0);
 
 // ---------------------------------------------------------------------------
 // Aides
@@ -58,6 +72,11 @@ static const lv_font_t *font_for(int size) {
 static lv_color_t color_of(const char *hex, uint32_t def) {
   if (!hex || hex[0] != '#' || strlen(hex) < 7) return lv_color_hex(def);
   return lv_color_hex(strtoul(hex + 1, nullptr, 16));
+}
+
+static uint32_t hex_of(const char *hex, uint32_t def) {
+  if (!hex || hex[0] != '#' || strlen(hex) < 7) return def;
+  return strtoul(hex + 1, nullptr, 16);
 }
 
 static int gi(JsonObject o, const char *k, int def) {
@@ -183,6 +202,102 @@ static void local_action(const Bind &b) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Cameras
+// ---------------------------------------------------------------------------
+// Message (chargement, erreur) affiche au centre d'une camera
+static lv_obj_t *cam_message(lv_obj_t *parent) {
+  lv_obj_t *l = lv_label_create(parent);
+  lv_obj_set_style_text_font(l, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_color(l, lv_color_hex(0xC8CDD6), 0);
+  lv_obj_set_style_bg_color(l, lv_color_hex(0x000000), 0);
+  lv_obj_set_style_bg_opa(l, LV_OPA_60, 0);
+  lv_obj_set_style_pad_hor(l, 8, 0);
+  lv_obj_set_style_pad_ver(l, 4, 0);
+  lv_obj_set_style_radius(l, 6, 0);
+  lv_label_set_text(l, "Camera...");
+  lv_obj_center(l);
+  return l;
+}
+
+static lv_obj_t *cam_image(lv_obj_t *parent, int w, int h) {
+  lv_obj_t *img = lv_image_create(parent);
+  lv_obj_set_pos(img, 0, 0);
+  lv_obj_set_size(img, w, h);
+  lv_obj_remove_flag(img, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_add_flag(img, LV_OBJ_FLAG_HIDDEN);
+  return img;
+}
+
+// Applique la derniere image (ou erreur) recue pour une camera
+static void cam_poll_into(int cam, lv_obj_t *img, lv_obj_t *lbl) {
+  const lv_image_dsc_t *dsc = nullptr;
+  String err;
+  int r = camera_poll(cam, &dsc, err);
+  if (r == 1) {
+    lv_image_cache_drop(dsc);
+    lv_image_set_src(img, dsc);
+    if (lv_obj_has_flag(img, LV_OBJ_FLAG_HIDDEN)) lv_obj_remove_flag(img, LV_OBJ_FLAG_HIDDEN);
+    if (!lv_obj_has_flag(lbl, LV_OBJ_FLAG_HIDDEN)) lv_obj_add_flag(lbl, LV_OBJ_FLAG_HIDDEN);
+  } else if (r == -1) {
+    // Le message reste par-dessus la derniere image : on voit qu'elle est figee
+    lv_label_set_text(lbl, err.c_str());
+    lv_obj_remove_flag(lbl, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_move_foreground(lbl);
+  }
+}
+
+// Oublie la camera plein ecran (son objet est detruit avec sa page)
+static void fullscreen_forget() {
+  if (s_full_cam >= 0) camera_close(s_full_cam);
+  s_full_cam = -1;
+  s_full = s_full_img = s_full_lbl = nullptr;
+}
+
+static void fullscreen_event_cb(lv_event_t *) {
+  if (!s_full) return;
+  lv_obj_delete_async(s_full);
+  fullscreen_forget();
+}
+
+static void fullscreen_open(const Bind &b) {
+  if (s_full || b.entity.isEmpty()) return;
+  s_full = lv_obj_create(lv_screen_active());
+  lv_obj_remove_style_all(s_full);
+  lv_obj_set_pos(s_full, 0, 0);
+  lv_obj_set_size(s_full, LCD_H_RES, LCD_V_RES);
+  solid_bg(s_full, lv_color_hex(0x000000));
+  lv_obj_remove_flag(s_full, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_add_flag(s_full, LV_OBJ_FLAG_CLICKABLE);
+  s_full_lbl = cam_message(s_full);
+  s_full_img = cam_image(s_full, LCD_H_RES, LCD_V_RES);
+  lv_obj_add_event_cb(s_full, fullscreen_event_cb, LV_EVENT_CLICKED, nullptr);
+  s_full_cam = camera_open(b.entity, LCD_H_RES, LCD_V_RES, b.interval, CAM_CONTAIN, 0x000000);
+  if (s_full_cam < 0) lv_label_set_text(s_full_lbl, "Memoire insuffisante");
+}
+
+static void cameras_close() {
+  fullscreen_forget();
+  camera_close_all();
+  s_cams.clear();
+}
+
+static void cameras_loop() {
+  lv_obj_t *act = lv_screen_active();
+  bool lit = !backlight_is_off();
+  for (size_t i : s_cams) {
+    Bind &b = s_binds[i];
+    if (b.cam < 0) continue;
+    // Seules les cameras visibles sont telechargees
+    camera_set_active(b.cam, lit && !s_full && b.page == act);
+    cam_poll_into(b.cam, b.img, b.lbl);
+  }
+  if (s_full_cam >= 0) {
+    camera_set_active(s_full_cam, lit);
+    cam_poll_into(s_full_cam, s_full_img, s_full_lbl);
+  }
+}
+
 static void widget_event_cb(lv_event_t *e) {
   size_t idx = (size_t)(uintptr_t)lv_event_get_user_data(e);
   if (idx >= s_binds.size()) return;
@@ -190,7 +305,9 @@ static void widget_event_cb(lv_event_t *e) {
   lv_event_code_t code = lv_event_get_code(e);
   bool local = is_local(b.entity);
 
-  if (b.type == "action" && code == LV_EVENT_CLICKED) {
+  if (b.type == "camera") {
+    if (code == LV_EVENT_CLICKED && b.full) fullscreen_open(b);
+  } else if (b.type == "action" && code == LV_EVENT_CLICKED) {
     if (b.mode == "page") show_page(b.target);
     else if (b.mode == "admin") { if (s_exit_cb) s_exit_cb(); }
     else if (local) local_action(b);
@@ -229,7 +346,7 @@ static void base_geometry(lv_obj_t *o, JsonObject w, bool auto_height = false) {
   else lv_obj_set_height(o, max(1, gi(w, "h", 40)));
 }
 
-static void solid_bg(lv_obj_t *o, lv_color_t c, lv_style_selector_t sel = 0) {
+static void solid_bg(lv_obj_t *o, lv_color_t c, lv_style_selector_t sel) {
   lv_obj_set_style_bg_color(o, c, sel);
   lv_obj_set_style_bg_opa(o, LV_OPA_COVER, sel);
 }
@@ -396,6 +513,28 @@ static void create_widget(lv_obj_t *scr, JsonObject w) {
     lv_bar_set_range(bar, b.min, b.max);
     lv_bar_set_value(bar, b.min, LV_ANIM_OFF);
     add_bind(b, bar, LV_EVENT_ALL);
+  } else if (type == "camera") {
+    uint32_t bg_rgb = hex_of(w["bg"], 0x000000);
+    lv_obj_t *box = lv_obj_create(scr);
+    main_obj = box;
+    lv_obj_remove_style_all(box);
+    base_geometry(box, w);
+    solid_bg(box, lv_color_hex(bg_rgb));
+    lv_obj_remove_flag(box, LV_OBJ_FLAG_SCROLLABLE);
+    b.full = w["full"] | true;
+    if (!b.full) lv_obj_remove_flag(box, LV_OBJ_FLAG_CLICKABLE);
+    b.interval = (uint32_t)max(100, gi(w, "interval", 1000));
+    b.page = scr;
+    b.lbl = cam_message(box);
+    b.img = cam_image(box, max(1, ww), max(1, hh));
+    if (b.entity.isEmpty()) {
+      lv_label_set_text(b.lbl, "Aucune camera");
+    } else {
+      b.cam = camera_open(b.entity, max(1, ww), max(1, hh), b.interval, camera_fit_from(gs(w, "fit", "contain")), bg_rgb);
+      if (b.cam < 0) lv_label_set_text(b.lbl, "Memoire insuffisante");
+    }
+    add_bind(b, box, b.full ? LV_EVENT_CLICKED : LV_EVENT_ALL);
+    s_cams.push_back(s_binds.size() - 1);
   }
   (void)hh;
 
@@ -421,6 +560,9 @@ static bool build() {
   JsonArray pages = doc["pages"];
   if (pages.isNull() || pages.size() == 0) return false;
 
+  // Les cameras de l'ancien affichage sont liberees : il est remplace avant
+  // le prochain rendu (dashboard_reload) ou n'est plus affiche.
+  cameras_close();
   s_binds.clear();
   s_binds.reserve(256);   // Les index servent de user_data : pas de reallocation
   for (JsonObject p : pages) {
@@ -438,12 +580,12 @@ static bool build() {
 
   std::vector<HaWatch> watch;
   for (auto &b : s_binds)
-    if (b.entity.length() && !is_local(b.entity)) watch.push_back({b.entity, b.attr});
+    if (b.entity.length() && !is_local(b.entity) && b.type != "camera") watch.push_back({b.entity, b.attr});
   s_bl_version = 0;   // Force l'envoi de l'etat local aux widgets
   s_batt_version = 0;
   ha_set_watch(watch);
-  Serial.printf("[DASH] %u page(s), %u widget(s) relies, %u entite(s) surveillee(s)\n",
-                (unsigned)s_pages.size(), (unsigned)s_binds.size(), (unsigned)watch.size());
+  Serial.printf("[DASH] %u page(s), %u widget(s) relies, %u entite(s) surveillee(s), %u camera(s)\n",
+                (unsigned)s_pages.size(), (unsigned)s_binds.size(), (unsigned)watch.size(), (unsigned)s_cams.size());
   return true;
 }
 
@@ -520,6 +662,7 @@ bool dashboard_show() {
   if (s_active) return true;
   if (!build()) {
     destroy(s_pages);
+    cameras_close();
     s_binds.clear();
     return false;
   }
@@ -533,6 +676,7 @@ bool dashboard_show() {
 
 void dashboard_leave(lv_obj_t *next_scr) {
   lv_screen_load(next_scr);
+  cameras_close();
   destroy(s_pages);
   s_binds.clear();
   s_active = false;
@@ -584,6 +728,7 @@ void dashboard_loop() {
   for (auto &u : ups)
     for (auto &b : s_binds)
       if (b.entity == u.entity) apply(b, u);
+  cameras_loop();
 
   if (millis() - s_last_dot > 1000) {
     s_last_dot = millis();

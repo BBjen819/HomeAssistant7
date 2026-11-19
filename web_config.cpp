@@ -3,6 +3,7 @@
 #include "ha_client.h"
 #include "backlight.h"
 #include "battery.h"
+#include "camera.h"
 #include "web_page.h"
 #include <WiFi.h>
 #include <WebServer.h>
@@ -183,6 +184,32 @@ static void handle_ha_services() {
   String out, err;
   if (ha_list_services(out, err)) s_server.send(200, "application/json", out);
   else send_error(502, err);
+}
+
+// Image d'une camera pour l'apercu du designer : /api/ha/camera?id=camera.x&w=400&h=225
+static void handle_ha_camera() {
+  String id = s_server.arg("id");
+  bool ok = id.startsWith("camera.") && id.length() < 128;
+  for (size_t i = 0; ok && i < id.length(); i++) {
+    char c = id[i];
+    ok = isalnum((unsigned char)c) || c == '_' || c == '.';
+  }
+  if (!ok) {
+    send_error(400, "Entite camera invalide");
+    return;
+  }
+  int w = constrain(s_server.arg("w").toInt(), 16, LCD_H_RES);
+  int h = constrain(s_server.arg("h").toInt(), 16, LCD_V_RES);
+  uint8_t *jpg = nullptr;
+  size_t len = 0;
+  String err;
+  if (!camera_snapshot(id, w, h, &jpg, &len, err)) {
+    send_error(502, err);
+    return;
+  }
+  s_server.sendHeader("Cache-Control", "no-store");
+  s_server.send_P(200, "image/jpeg", (const char *)jpg, len);
+  free(jpg);
 }
 
 static void handle_ha_state() {
@@ -396,6 +423,7 @@ void web_begin() {
   on_auth("/api/ha/entities", HTTP_GET, handle_ha_entities);
   on_auth("/api/ha/services", HTTP_GET, handle_ha_services);
   on_auth("/api/ha/state", HTTP_GET, handle_ha_state);
+  on_auth("/api/ha/camera", HTTP_GET, handle_ha_camera);
   on_auth("/api/apikey", HTTP_GET, handle_apikey_get);
   on_auth("/api/apikey", HTTP_POST, handle_apikey_regen);
   on_auth("/api/brightness", HTTP_GET, handle_brightness_get, true);

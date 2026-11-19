@@ -94,6 +94,9 @@ kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-b
 .w .knob{position:absolute;border-radius:50%}
 .w .fill{position:absolute;left:0;top:0;bottom:0}
 .w svg{display:block}
+.w img.cam{display:block;width:100%;height:100%;pointer-events:none;user-select:none}
+.w .cam-ph{color:#9AA3B2;font:500 14px/1.4 Montserrat,sans-serif}
+.w .cam-ph svg{display:inline-block;opacity:.6}
 .h{position:absolute;width:calc(12px * var(--inv,1));height:calc(12px * var(--inv,1));background:var(--sel);border:calc(2px * var(--inv,1)) solid #fff;border-radius:calc(3px * var(--inv,1));z-index:41}
 .h-r{right:calc(-8px * var(--inv,1));top:calc(50% - 6px * var(--inv,1));cursor:ew-resize}
 .h-b{bottom:calc(-8px * var(--inv,1));left:calc(50% - 6px * var(--inv,1));cursor:ns-resize}
@@ -300,8 +303,9 @@ const nearestSize=s=>SIZES.reduce((a,b)=>Math.abs(b-s)<Math.abs(a-s)?b:a,SIZES[0
 
 const TYPES={tile:['Panneau','Fond, regroupe des éléments'],label:['Texte','Texte fixe'],value:['Valeur','Affiche l\'état d\'une entité'],
   toggle:['Bouton bascule','S\'allume quand l\'entité est active'],action:['Bouton d\'action','Script, scène ou page'],switch:['Interrupteur','Marche/arrêt d\'une entité'],
-  slider:['Curseur','Luminosité ou nombre'],arc:['Jauge','Valeur sur un arc'],bar:['Barre','Valeur en barre']};
-const PREFIX={tile:'tile',label:'lbl',value:'val',toggle:'btn',action:'act',switch:'sw',slider:'sld',arc:'gauge',bar:'bar'};
+  slider:['Curseur','Luminosité ou nombre'],arc:['Jauge','Valeur sur un arc'],bar:['Barre','Valeur en barre'],
+  camera:['Caméra','Image en direct d\'une caméra']};
+const PREFIX={tile:'tile',label:'lbl',value:'val',toggle:'btn',action:'act',switch:'sw',slider:'sld',arc:'gauge',bar:'bar',camera:'cam'};
 const ICON={
   tile:'<rect x="3" y="5" width="16" height="12" rx="3" fill="currentColor" opacity=".35"/>',
   label:'<path d="M5 6h12M11 6v11" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>',
@@ -311,7 +315,8 @@ const ICON={
   switch:'<rect x="2" y="7" width="18" height="8" rx="4" fill="currentColor" opacity=".45"/><circle cx="15" cy="11" r="3.2" fill="currentColor"/>',
   slider:'<path d="M3 11h16" stroke="currentColor" stroke-width="2" opacity=".45" stroke-linecap="round"/><path d="M3 11h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="11" r="3.2" fill="currentColor"/>',
   arc:'<path d="M5.3 16.7A8 8 0 1 1 16.7 16.7" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".4"/><path d="M5.3 16.7A8 8 0 0 1 11 3" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"/>',
-  bar:'<rect x="2" y="8" width="18" height="6" rx="3" fill="currentColor" opacity=".35"/><rect x="2" y="8" width="11" height="6" rx="3" fill="currentColor"/>'
+  bar:'<rect x="2" y="8" width="18" height="6" rx="3" fill="currentColor" opacity=".35"/><rect x="2" y="8" width="11" height="6" rx="3" fill="currentColor"/>',
+  camera:'<rect x="2" y="6" width="13" height="10" rx="2" fill="currentColor"/><path d="M15 10l5-3v8l-5-3z" fill="currentColor" opacity=".6"/>'
 };
 
 function defaults(t){
@@ -326,6 +331,7 @@ function defaults(t){
     case 'slider': return {w:320,h:24,entity:'',min:0,max:255,action:'',bg:'#454B57',onBg:'#F2B233',knob:'#FFFFFF',sample:'160'};
     case 'arc': return {w:180,h:180,entity:'',attribute:'',min:0,max:100,thick:16,bg:'#3A3F48',onBg:'#4FA3E0',showValue:true,decimals:0,suffix:'%',...txt,size:32,sample:'46'};
     case 'bar': return {w:300,h:20,entity:'',attribute:'',min:0,max:100,bg:'#3A3F48',onBg:'#4CAF7A',radius:10,sample:'72'};
+    case 'camera': return {w:400,h:224,entity:'',interval:1000,fit:'contain',full:true,bg:'#000000'};
   }
 }
 function sample(){
@@ -438,8 +444,29 @@ function paint(el,w){
         (w.showValue?`<div class="ctr" style="${fontCss(w)}"><span>${esc(devText(valText({...w,prefix:'',valueType:'number',sample:String(parseFloat(w.sample)*(+w.factor||1))})))}</span></div>`:'');break;}
     case 'bar':{const p=pct(w);st.background=w.bg;st.borderRadius=w.radius+'px';st.overflow='hidden';
       h=`<div class="fill" style="width:${p*100}%;background:${w.onBg};border-radius:${w.radius}px"></div>`;break;}
+    case 'camera':{st.background=w.bg;st.overflow='hidden';
+      const snap=camSnapshot(w);
+      h=snap&&snap.url?`<img class="cam" src="${snap.url}" alt="" style="object-fit:${({cover:'cover',stretch:'fill'})[w.fit]||'contain'}">`
+        :`<div class="ctr cam-ph"><span>${ICON.camera.replace('<rect','<svg viewBox="0 0 22 22" width="40" height="40"><rect')}</svg><br>${esc(w.entity||'Aucune caméra')}${snap&&snap.err?'<br><small>'+esc(snap.err)+'</small>':''}</span></div>`;
+      break;}
   }
   el.innerHTML=h;
+}
+// Apercu des cameras : une image demandee a l'ecran (qui la lit dans HA), par entite
+const camSnaps={};
+function camSnapshot(w){
+  if(!ONLINE||dom(w.entity)!=='camera')return null;
+  let s=camSnaps[w.entity];
+  if(!s){
+    s=camSnaps[w.entity]={};
+    fetch(`/api/ha/camera?id=${encodeURIComponent(w.entity)}&w=${Math.min(800,w.w|0)}&h=${Math.min(480,w.h|0)}`).then(async r=>{
+      if(r.status===401){goLogin();return;}
+      if(!r.ok){let m='Aperçu indisponible';try{m=(await r.json()).message||m;}catch(e){}s.err=m;}
+      else s.url=URL.createObjectURL(await r.blob());
+      renderScreen();
+    }).catch(()=>{s.err='Aperçu indisponible';renderScreen();});
+  }
+  return s;
 }
 function renderScreen(){
   const p=page();
@@ -641,6 +668,9 @@ const F={
     (autoNote[w.id]?'Plage ajustée automatiquement : '+autoNote[w.id]+'.':(w.type==='slider'&&dom(w.entity)==='light'&&!w.field?'La luminosité d\'une lumière va de 0 à 255':''))},
   thick:{l:'Épaisseur',t:'num'},
   previewOn:{l:'Aperçu actif',t:'check'},
+  interval:{l:'Rafraîchissement (ms)',t:'num',hint:()=>'Délai entre deux images (100 ms minimum). La vitesse réelle dépend de la caméra, de la taille et du Wi-Fi : environ 1 à 5 images/s.'},
+  fit:{l:'Cadrage',t:'select',o:[['contain','Image entière'],['cover','Remplir (bords coupés)'],['stretch','Étirer']]},
+  full:{l:'Plein écran au toucher',t:'check',hint:()=>'Toucher l\'image l\'affiche en 800 × 480 ; toucher à nouveau la referme.'},
   showValue:{l:'Afficher la valeur',t:'check'}
 };
 const G={
@@ -652,7 +682,8 @@ const G={
   switch:[['Home Assistant',['entity','action','previewOn']],['Apparence',['bg','onBg','knob']]],
   slider:[['Home Assistant',['entity','action','field','min','max','factor','sample']],['Apparence',['bg','onBg','knob']]],
   arc:[['Home Assistant',['entity','attribute','min','max','sample']],['Valeur au centre',['showValue','decimals','suffix','size','color']],['Apparence',['thick','bg','onBg']]],
-  bar:[['Home Assistant',['entity','attribute','min','max','sample']],['Apparence',['bg','onBg','radius']]]
+  bar:[['Home Assistant',['entity','attribute','min','max','sample']],['Apparence',['bg','onBg','radius']]],
+  camera:[['Home Assistant',['entity','interval']],['Affichage',['fit','full','bg']]]
 };
 function addField(box,obj,k,f,onCh){
   if(f.show&&!f.show(obj))return;
@@ -790,12 +821,13 @@ function checks(){
   const pageIds=new Set(S.pages.map(p=>p.id));
   const count=new Map();for(const id of [...S.pages.map(p=>p.id),...allW().map(w=>w.id)])count.set(id,(count.get(id)||0)+1);
   for(const [id,n] of count)if(n>1)W(`L'id <code>${esc(id)}</code> est utilisé ${n} fois. Chaque élément et chaque page doit avoir son propre id.`);
-  const needsEnt=['value','toggle','switch','slider','arc','bar'];
+  const needsEnt=['value','toggle','switch','slider','arc','bar','camera'];
   for(const w of allW()){
     const b=vbox(w);
     if(b.x<-0.5||b.y<-0.5||b.x+b.w>S.res.w+0.5||b.y+b.h>S.res.h+0.5)W(`<code>${esc(w.id)}</code> dépasse du bord de l'écran${+w.rot?' (en tenant compte de la rotation)':''}.`);
     if(w.entity&&!/^[a-z_]+\.[a-z0-9_]+$/.test(w.entity))W(`<code>${esc(w.id)}</code> : entrez un id d'entité complet, comme <code>light.cuisine</code>.`);
     else if(needsEnt.includes(w.type)&&!w.entity)W(`<code>${esc(w.id)}</code> : aucune entité, l'élément restera inactif.`);
+    if(w.type==='camera'&&w.entity&&dom(w.entity)!=='camera')W(`<code>${esc(w.id)}</code> : choisissez une entité <code>camera.…</code>.`);
     if(w.type==='action'){
       if(w.mode==='page'&&!pageIds.has(w.target))W(`<code>${esc(w.id)}</code> : choisissez la page à ouvrir.`);
       if(w.mode==='ha'&&!w.entity&&!w.action)W(`<code>${esc(w.id)}</code> : indiquez une entité ou une action.`);

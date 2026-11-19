@@ -26,6 +26,7 @@ void ha_begin();
 
 void ha_get_config(String &url, bool &has_token);
 void ha_set_config(const String &url, const String &token);   // token vide = conserver l'actuel
+bool ha_get_credentials(String &url, String &token);           // false si non configure (camera)
 
 // Tests et requetes synchrones (pour le serveur web). token vide = jeton enregistre.
 bool ha_test(const String &url, const String &token, String &message);

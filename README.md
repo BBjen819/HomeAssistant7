@@ -30,6 +30,16 @@ L'aperçu est fidèle à l'écran : même police (Montserrat Medium), mêmes tai
 - Actions : `POST /api/services/<domaine>/<service>` avec `entity_id`. Pour les curseurs, `brightness` (lumières) ou `value` (autres entités).
 - Une pastille rouge ou orange apparaît en haut à droite si Home Assistant est injoignable ou non configuré.
 
+## Caméras
+Élément **Caméra** du designer : choisissez une entité `camera.…` de Home Assistant.
+- L'écran télécharge en boucle l'image de `GET /api/camera_proxy/<entité>?width=L&height=H`. Home Assistant la réduit à peu près à la taille de l'élément. L'écran la décode en JPEG (esp_jpeg), puis la met à l'échelle.
+- **Rafraîchissement** : délai entre deux images, 100 ms au minimum. Comptez environ 1 à 5 images par seconde selon la caméra, la taille et le Wi-Fi.
+- **Cadrage** : image entière (bandes de la couleur de fond), remplir (bords coupés) ou étirer.
+- **Plein écran au toucher** : affiche la caméra en 800 × 480. Un autre toucher la referme.
+- Seules les caméras de la page affichée sont téléchargées, et aucune ne l'est quand le rétroéclairage est éteint.
+- En cas de problème (caméra indisponible, jeton refusé), un message s'affiche par-dessus la dernière image.
+- Dans le designer, l'aperçu montre une vraie image de la caméra, obtenue par `GET /api/ha/camera?id=…&w=…&h=…`.
+
 ## Luminosité de l'écran
 Le rétroéclairage de cette carte (CH422G EXIO2) ne fait que marche/arrêt. Les valeurs fonctionnent donc ainsi :
 - **0 %** : rétroéclairage éteint. Un toucher le rallume, et ce toucher n'est pas transmis à l'interface.
@@ -108,6 +118,7 @@ Téléversez par le port **USB** natif de la carte. Sur cette carte, le port UAR
 | `lvgl_port.*` | LVGL en mode direct sur les framebuffers |
 | `app_ui.*` | Accueil, Wi-Fi, écran « Connecté », machine d'états |
 | `ha_client.*` | Client API REST Home Assistant (tâche de fond) |
+| `camera.*` | Images des caméras HA : téléchargement, décodage JPEG, double tampon PSRAM |
 | `web_config.*` | Serveur web, API REST, stockage FFat |
 | `dashboard.*` | Rendu LVGL du layout et liaison avec HA |
 | `web/index.html` → `web_page.h` | Page de configuration |

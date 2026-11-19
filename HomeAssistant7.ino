@@ -19,6 +19,7 @@
 #include "backlight.h"
 #include "battery.h"
 #include "ha_client.h"
+#include "camera.h"
 #include "web_config.h"
 
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);
@@ -71,6 +72,7 @@ void setup() {
   backlight_begin();
   battery_begin();
   ha_begin();
+  camera_begin();
   app_ui_begin();   // Initialise aussi la pile Wi-Fi
   web_begin();
 

@@ -224,6 +224,13 @@ void ha_get_config(String &url, bool &has_token) {
   has_token = s_token.length() > 0;
 }
 
+bool ha_get_credentials(String &url, String &token) {
+  Lock l;
+  url = s_url;
+  token = s_token;
+  return url.length() && token.length();
+}
+
 void ha_set_config(const String &url, const String &token) {
   {
     Lock l;
