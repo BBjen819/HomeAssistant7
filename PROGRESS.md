@@ -20,10 +20,15 @@ Elles ont été testées dans le navigateur ou seulement compilées.
   - Testé avec un faux Home Assistant, pas avec le vrai.
 - **Luminosité** : voile logiciel, et 0 % = rétroéclairage éteint. Entités `screen.brightness` et `screen.backlight`.
 - **Bouton d'action « Ouvrir l'écran de configuration »**.
-- **Clé API** : accès à `/api/brightness` et `/api/battery` pour Home Assistant.
+- **Aucune clé API** (2026-11-18) : supprimée à la demande, Home Assistant ne peut pas piloter l'écran. Toutes les routes `/api/*` exigent la session du mot de passe. L'ancienne clé est effacée de la NVS au démarrage.
 - **Caméras HA** (2026-11-18) : élément « Caméra » avec rafraîchissement, cadrage et plein écran au toucher. Aperçu réel dans le designer.
   - Designer testé dans Edge headless. Firmware compilé et téléversé, **pas encore vérifié avec une vraie caméra**.
   - À surveiller : l'ordre des couleurs (rouge et bleu inversés ?), la vitesse en images par seconde et un éventuel scintillement dû à la PSRAM.
+- **Écran de configuration** : bouton « Redemarrer », qui demande une confirmation par un 2e appui dans les 4 s. L'ouverture de cet écran force un rafraîchissement complet, une première fois tout de suite puis une seconde 400 ms plus tard. Un nouveau layout force aussi un rafraîchissement complet.
+  - Ce rafraîchissement ne corrige pas la cause des défauts d'affichage après une mise à jour du layout. Cause soupçonnée : l'écriture en flash et la charge de la PSRAM (caméras).
+- **Polices avec accents** (2026-11-18) : Montserrat Latin-1 (é, à, ç, œ, « », €, …) en 12 à 48 px, générées par `tools/gen_fonts.ps1` dans `src/fonts/`. Elles remplacent les polices intégrées de LVGL. Les caractères absents (emoji…) s'affichent « ? », comme dans l'aperçu du designer. Les textes de l'écran de configuration sont maintenant accentués.
+- **Durée de l'écran admin au démarrage** (2026-11-18) : choix 1, 5, 10 ou 15 s sur l'écran « Connecté » (NVS `ui/admin_s`, 5 s par défaut). Toucher ce réglage ou la luminosité annule l'ouverture automatique du tableau de bord.
+- **Son de clic** : non ajouté, car la carte ESP32-S3-Touch-LCD-7 n'a ni haut-parleur ni buzzer. Il faudrait câbler un buzzer passif sur une broche libre.
 - **Mesure de batterie optionnelle** sur GPIO6 : entités `screen.battery` et `screen.battery_voltage`.
   - Demande un pont diviseur à câbler, et est désactivée par défaut.
 
@@ -43,9 +48,9 @@ Elles ont été testées dans le navigateur ou seulement compilées.
 - Après un téléversement, **appuyer sur RESET** : le reset automatique ne relance pas la carte.
 - Pour reflasher sans recompiler, utiliser le dossier `firmware/` (voir `firmware/FLASH.txt`).
 - Après une modification de `web/*.html`, lancer `tools\embed_web.ps1`.
+- Pour changer les caractères des polices : `tools/gen_fonts.ps1` (Node.js requis). Garder la même liste dans `dashboard.cpp` (in_font) et `web/index.html` (inFont).
 
 ## Points ouverts / prochaines étapes
 - Vérifier la charge en alimentant le panneau par le port UART.
 - Remplacer la lecture périodique de HA (toutes les 2 s) par l'API WebSocket de HA, plus réactive et moins chargée.
-- Ajouter la clé API dans les exemples `rest_command` du README.
-- Polices avec accents : générer une police Montserrat Latin-1 pour LVGL.
+

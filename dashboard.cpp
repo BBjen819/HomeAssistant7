@@ -55,10 +55,10 @@ static void solid_bg(lv_obj_t *o, lv_color_t c, lv_style_selector_t sel = 0);
 // ---------------------------------------------------------------------------
 static const lv_font_t *font_for(int size) {
   static const struct { int s; const lv_font_t *f; } F[] = {
-    {12, &lv_font_montserrat_12}, {14, &lv_font_montserrat_14}, {16, &lv_font_montserrat_16},
-    {18, &lv_font_montserrat_18}, {20, &lv_font_montserrat_20}, {22, &lv_font_montserrat_22},
-    {24, &lv_font_montserrat_24}, {28, &lv_font_montserrat_28}, {32, &lv_font_montserrat_32},
-    {36, &lv_font_montserrat_36}, {40, &lv_font_montserrat_40}, {48, &lv_font_montserrat_48},
+    {12, &lv_font_fr_12}, {14, &lv_font_fr_14}, {16, &lv_font_fr_16},
+    {18, &lv_font_fr_18}, {20, &lv_font_fr_20}, {22, &lv_font_fr_22},
+    {24, &lv_font_fr_24}, {28, &lv_font_fr_28}, {32, &lv_font_fr_32},
+    {36, &lv_font_fr_36}, {40, &lv_font_fr_40}, {48, &lv_font_fr_48},
   };
   const lv_font_t *best = F[0].f;
   int bd = 1000;
@@ -89,10 +89,16 @@ static String gs(JsonObject o, const char *k, const char *def = "") {
   return String(s);
 }
 
-// Les polices Montserrat de LVGL ne couvrent que l'ASCII (+ ° et •) :
-// on retire les accents (meme table que le designer, pour un apercu exact).
+// Caracteres presents dans les polices lv_font_fr_XX (voir tools/gen_fonts.ps1).
+static bool in_font(uint32_t cp) {
+  return (cp >= 0x20 && cp <= 0x7E) || (cp >= 0xA0 && cp <= 0xFF) || cp == 0x152 || cp == 0x153 ||
+         cp == 0x2013 || cp == 0x2014 || cp == 0x2018 || cp == 0x2019 ||
+         (cp >= 0x201C && cp <= 0x201E) || cp == 0x2022 || cp == 0x2026 || cp == 0x20AC;
+}
+
+// Remplace par « ? » les caracteres absents de la police (meme regle que
+// devText() du designer, pour un apercu exact). Les accents sont conserves.
 static String deaccent(const String &in) {
-  static const char LATIN1[] = "AAAAAAACEEEEIIIIDNOOOOOxOUUUUYPsaaaaaaaceeeeiiiidnooooo/ouuuuypy";
   String out;
   const uint8_t *p = (const uint8_t *)in.c_str();
   while (*p) {
@@ -102,17 +108,11 @@ static String deaccent(const String &in) {
     else if ((*p & 0xE0) == 0xC0 && p[1]) { cp = ((p[0] & 0x1F) << 6) | (p[1] & 0x3F); n = 2; }
     else if ((*p & 0xF0) == 0xE0 && p[1] && p[2]) { cp = ((p[0] & 0x0F) << 12) | ((p[1] & 0x3F) << 6) | (p[2] & 0x3F); n = 3; }
     else if ((*p & 0xF8) == 0xF0 && p[1] && p[2] && p[3]) { cp = 0xFFFF; n = 4; }
-    else { cp = '?'; n = 1; }
+    else { cp = 0xFFFF; n = 1; }   // UTF-8 invalide
 
-    if (cp < 0x80) out += (char)cp;
-    else if (cp == 0xB0 || cp == 0x2022) out.concat((const char *)p, n);   // ° et • existent
-    else if (cp >= 0xC0 && cp <= 0xFF) out += LATIN1[cp - 0xC0];
-    else if (cp == 0x152) out += "OE";
-    else if (cp == 0x153) out += "oe";
-    else if (cp == 0x2018 || cp == 0x2019) out += '\'';
-    else if (cp == 0xAB || cp == 0xBB || cp == 0x201C || cp == 0x201D) out += '"';
-    else if (cp == 0x2013 || cp == 0x2014) out += '-';
-    else if (cp == 0xA0) out += ' ';
+    if (cp == '\r') { p += n; continue; }
+    if (cp == '\n' || cp == '\t') out += (char)cp;
+    else if (in_font(cp)) out.concat((const char *)p, n);
     else out += '?';
     p += n;
   }
@@ -208,14 +208,15 @@ static void local_action(const Bind &b) {
 // Message (chargement, erreur) affiche au centre d'une camera
 static lv_obj_t *cam_message(lv_obj_t *parent) {
   lv_obj_t *l = lv_label_create(parent);
-  lv_obj_set_style_text_font(l, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_font(l, &lv_font_fr_16, 0);
   lv_obj_set_style_text_color(l, lv_color_hex(0xC8CDD6), 0);
   lv_obj_set_style_bg_color(l, lv_color_hex(0x000000), 0);
   lv_obj_set_style_bg_opa(l, LV_OPA_60, 0);
   lv_obj_set_style_pad_hor(l, 8, 0);
   lv_obj_set_style_pad_ver(l, 4, 0);
   lv_obj_set_style_radius(l, 6, 0);
-  lv_label_set_text(l, "Camera...");
+  lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_CENTER, 0);
+  lv_label_set_text(l, "Caméra…");
   lv_obj_center(l);
   return l;
 }
@@ -273,7 +274,7 @@ static void fullscreen_open(const Bind &b) {
   s_full_img = cam_image(s_full, LCD_H_RES, LCD_V_RES);
   lv_obj_add_event_cb(s_full, fullscreen_event_cb, LV_EVENT_CLICKED, nullptr);
   s_full_cam = camera_open(b.entity, LCD_H_RES, LCD_V_RES, b.interval, CAM_CONTAIN, 0x000000);
-  if (s_full_cam < 0) lv_label_set_text(s_full_lbl, "Memoire insuffisante");
+  if (s_full_cam < 0) lv_label_set_text(s_full_lbl, "Mémoire insuffisante");
 }
 
 static void cameras_close() {
@@ -528,10 +529,10 @@ static void create_widget(lv_obj_t *scr, JsonObject w) {
     b.lbl = cam_message(box);
     b.img = cam_image(box, max(1, ww), max(1, hh));
     if (b.entity.isEmpty()) {
-      lv_label_set_text(b.lbl, "Aucune camera");
+      lv_label_set_text(b.lbl, "Aucune caméra");
     } else {
       b.cam = camera_open(b.entity, max(1, ww), max(1, hh), b.interval, camera_fit_from(gs(w, "fit", "contain")), bg_rgb);
-      if (b.cam < 0) lv_label_set_text(b.lbl, "Memoire insuffisante");
+      if (b.cam < 0) lv_label_set_text(b.lbl, "Mémoire insuffisante");
     }
     add_bind(b, box, b.full ? LV_EVENT_CLICKED : LV_EVENT_ALL);
     s_cams.push_back(s_binds.size() - 1);
@@ -703,6 +704,15 @@ void dashboard_reload() {
     if (p.id == current) target = p.scr;
   lv_screen_load(target);
   destroy(old);
+  // Nouveau layout : tout l'ecran est redessine, puis encore une fois apres
+  // l'ecriture en flash et la destruction des anciennes pages.
+  auto refresh = [](lv_timer_t *) {
+    lv_obj_invalidate(lv_screen_active());
+    lv_obj_invalidate(lv_layer_top());
+  };
+  refresh(nullptr);
+  lv_timer_t *t = lv_timer_create(refresh, 500, nullptr);
+  lv_timer_set_repeat_count(t, 1);
 }
 
 void dashboard_loop() {

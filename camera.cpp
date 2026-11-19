@@ -13,6 +13,9 @@ static const int MAX_CAMS = 6;
 static const size_t MAX_JPEG = 1536 * 1024;     // Image JPEG maximale acceptee
 static const uint32_t MIN_INTERVAL_MS = 100;
 static const uint32_t ERROR_RETRY_MS = 3000;
+static const uint32_t UNREACHABLE_RETRY_MS = 10000;   // Home Assistant injoignable
+
+static inline bool unreachable(int code) { return code < 0 && code > -100; }   // Erreurs reseau HTTPClient
 
 // Codes d'erreur internes (les codes HTTPClient sont de -1 a -11)
 static const int ERR_NOT_CONFIGURED = -100;
@@ -72,16 +75,16 @@ static void free_slot(Slot &s) {
 
 static String error_text(int code) {
   switch (code) {
-    case 401: return "Camera : jeton refuse";
-    case 404: return "Camera introuvable";
-    case ERR_NOT_CONFIGURED: return "Home Assistant non configure";
+    case 401: return "Caméra : jeton refusé";
+    case 404: return "Caméra introuvable";
+    case ERR_NOT_CONFIGURED: return "Home Assistant non configuré";
     case ERR_TOO_BIG: return "Image trop grande";
     case ERR_DECODE: return "Image illisible";
-    case ERR_MEMORY: return "Memoire insuffisante";
+    case ERR_MEMORY: return "Mémoire insuffisante";
   }
-  if (code >= 500) return "Camera indisponible";
-  if (code < 0) return "Home Assistant injoignable";
-  return "Camera : erreur HTTP " + String(code);
+  if (code >= 500) return "Caméra indisponible";
+  if (unreachable(code)) return "Home Assistant injoignable\nNouvel essai dans 10 s";
+  return "Caméra : erreur HTTP " + String(code);
 }
 
 // ---------------------------------------------------------------------------
@@ -305,9 +308,16 @@ static void cam_task(void *) {
           s.err_new = true;
           Serial.printf("[CAM] %s : %s (%d)\n", entity.c_str(), error_text(code).c_str(), code);
         }
-        uint32_t retry = millis() + ERROR_RETRY_MS;
+        uint32_t retry = millis() + (unreachable(code) ? UNREACHABLE_RETRY_MS : ERROR_RETRY_MS);
         if (!due(s.next_at, retry)) s.next_at = retry;
       }
+    }
+    // Apres une erreur reseau, le prochain essai repart d'une connexion neuve
+    if (unreachable(code)) {
+      conn->http.end();
+      conn->plain.stop();
+      conn->secure.stop();
+      conn->base = "";
     }
     // Garde de petits tampons entre deux images, libere les gros (image plein ecran)
     if (jpg.cap > 256 * 1024) {

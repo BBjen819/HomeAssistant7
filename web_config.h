@@ -13,12 +13,10 @@
 #pragma once
 #include <Arduino.h>
 
-// Toutes les routes /api/* exigent une session (sauf /api/login) ;
-// /api/brightness accepte aussi "Authorization: Bearer <cle API>".
+// Toutes les routes /api/* exigent une session (sauf /api/login).
+// Il n'y a pas de cle API : Home Assistant ne peut pas piloter l'ecran.
 //   POST /api/login        {pin} -> cookie de session
 //   POST /api/logout
-//   GET  /api/apikey       Cle API (pour Home Assistant)
-//   POST /api/apikey       Genere une nouvelle cle
 extern const char *DEVICE_HOSTNAME;
 
 // Mot de passe a 6 chiffres de cette session (affiche sur l'ecran "Connecte")

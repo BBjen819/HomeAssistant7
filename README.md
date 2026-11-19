@@ -6,7 +6,7 @@ Firmware Arduino (sans ESPHome) pour un écran tactile 800×480 relié à Home A
 1. **Démarrage** : aplats de couleurs, mire, arc-en-ciel animé (en double tampon), puis écran d'accueil avec la résolution, le taux de rafraîchissement mesuré et un test du tactile.
 2. **Wi-Fi** : réseau mémorisé, sinon scan → clavier tactile → connexion.
 3. **Écran « Connecté »** : affiche l'IP et l'adresse de configuration (`http://<ip>/` ou `http://ha-panel-7.local/`).
-4. **Tableau de bord** : s'ouvre automatiquement si un layout existe. Un **appui long de 3 s sur le fond** d'une page revient à l'écran « Connecté ».
+4. **Tableau de bord** : s'ouvre automatiquement si un layout existe, après 1, 5, 10 ou 15 s (réglage « Démarrage » de l'écran « Connecté », 5 s par défaut). Un **appui long de 3 s sur le fond** d'une page revient à l'écran « Connecté ».
 
 ## Page de configuration (navigateur)
 Ouvrez `http://<ip de l'écran>/` :
@@ -14,7 +14,7 @@ Ouvrez `http://<ip de l'écran>/` :
 - **Designer WYSIWYG 800×480** : panneaux, textes, valeurs, boutons bascule, boutons d'action (service HA ou changement de page), interrupteurs, curseurs, jauges et barres. Les entités sont proposées en autocomplétion depuis Home Assistant.
 - **Enregistrer sur l'écran** : le layout est stocké dans `/layout.json` (FFat) et l'écran se met à jour immédiatement.
 
-L'aperçu est fidèle à l'écran : même police (Montserrat Medium), mêmes tailles, mêmes hauteurs de ligne LVGL, mêmes géométries. Les accents sont remplacés (é → e) sur l'écran comme dans l'aperçu.
+L'aperçu est fidèle à l'écran : même police (Montserrat Medium), mêmes tailles, mêmes hauteurs de ligne LVGL, mêmes géométries. Les accents s'affichent sur l'écran (polices Latin-1 générées, voir `tools/gen_fonts.ps1`) ; un caractère absent de la police s'affiche « ? », sur l'écran comme dans l'aperçu.
 
 ### API REST de l'écran
 | Méthode | Chemin | Rôle |
@@ -24,6 +24,8 @@ L'aperçu est fidèle à l'écran : même police (Montserrat Medium), mêmes tai
 | GET/POST | `/api/ha` | Lire / enregistrer `{url, token}` |
 | POST | `/api/ha/test` | Tester `{url, token}` |
 | GET | `/api/ha/entities` | Liste `[{id, name}]` des entités HA |
+
+Toutes ces routes exigent une session ouverte avec le mot de passe affiché sur l'écran. **Il n'y a pas de clé API** : Home Assistant (ou tout autre système) ne peut pas piloter l'écran. C'est l'écran qui interroge Home Assistant, jamais l'inverse.
 
 ### Lien avec Home Assistant
 - États : `GET /api/states/<entité>` toutes les ~1,5 s pour chaque entité utilisée.
@@ -49,33 +51,15 @@ Où la régler :
 - **Écran « Connecté »** : curseur de 5 à 100 %.
 - **Page web** : curseur dans la barre du haut.
 - **Designer** : entités locales `screen.brightness` (curseur, jauge, barre, valeur) et `screen.backlight` (bouton bascule, interrupteur, bouton d'action).
-- **API** : `GET/POST /api/brightness` avec `{"value": 0..100}` ou `{"on": true|false}`.
+- **API web** (session de la page de configuration seulement) : `GET/POST /api/brightness` avec `{"value": 0..100}` ou `{"on": true|false}`.
 
 La valeur est conservée au redémarrage (écriture NVS différée de 3 s).
-
-Pour piloter la luminosité depuis Home Assistant (`configuration.yaml`, adapter l'IP) :
-```yaml
-rest_command:
-  panneau_luminosite:
-    url: "http://192.168.1.50/api/brightness"
-    method: POST
-    content_type: "application/json"
-    payload: '{"value": {{ value }}}'
-
-sensor:
-  - platform: rest
-    name: Panneau luminosite
-    resource: "http://192.168.1.50/api/brightness"
-    value_template: "{{ value_json.value }}"
-    unit_of_measurement: "%"
-```
-Exemple d'action : `rest_command.panneau_luminosite` avec `value: 30`.
 
 ## Batterie
 - **Charge** : la puce CS8501 de la carte la gère entièrement (580 mA par défaut, réglable avec R45), dès que la carte reçoit du 5 V par USB. Aucune broche de l'ESP32 ne la commande : le firmware ne peut ni l'activer ni la bloquer. Les voyants CHG (en charge) et DONE (terminée) indiquent son état.
 - **Mesure** : aucune entrée de l'ESP32 ne reçoit la tension de la batterie (vérifié sur le schéma Waveshare). Pour l'afficher, il faut un pont diviseur sur le connecteur **Sensor AD (GPIO6)** : 100 kΩ entre BAT+ et AD, 100 kΩ entre AD et GND (rapport 2).
 - **Activation** : bouton **Batterie** de la page web, où l'on règle aussi le rapport du pont. La mesure est désactivée par défaut, parce qu'une entrée non câblée donne des valeurs fausses.
-- **Entités** : `screen.battery` (%) et `screen.battery_voltage` (V), en lecture seule. Elles sont aussi lisibles par `GET /api/battery`, avec la clé API.
+- **Entités** : `screen.battery` (%) et `screen.battery_voltage` (V), en lecture seule.
 
 ## Accès à la configuration depuis le tableau de bord
 - Un **bouton d'action** réglé sur « Ouvrir l'écran de configuration » mène à l'écran IP / Wi-Fi / luminosité.

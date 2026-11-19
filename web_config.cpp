@@ -266,13 +266,13 @@ static void handle_brightness_post() {
 //    demarrage, affiche sur l'ecran "Connecte".
 //  - Session : jeton aleatoire de 128 bits dans un cookie HttpOnly.
 //  - Anti-force brute : apres 5 echecs, blocage 30 s, double a chaque echec (max 10 min).
-//  - Cle API fixe (NVS), uniquement pour /api/brightness (Home Assistant).
+//  - Aucune cle API : seul un navigateur connecte avec le mot de passe peut
+//    modifier l'ecran (Home Assistant ne peut pas le piloter).
 // ---------------------------------------------------------------------------
 static const char *COOKIE_NAME = "hapanel";
 static const size_t MAX_SESSIONS = 8;
 
 static String s_pin;
-static String s_api_key;
 static std::vector<String> s_sessions;
 static int s_failures = 0;
 static uint32_t s_lock_until = 0;
@@ -308,14 +308,10 @@ static bool has_session() {
   return false;
 }
 
-static bool has_api_key() {
-  return s_api_key.length() && s_server.header("Authorization") == "Bearer " + s_api_key;
-}
-
 // Enregistre une route protegee
-static void on_auth(const char *path, HTTPMethod method, std::function<void()> fn, bool allow_api_key = false) {
-  s_server.on(path, method, [fn, allow_api_key] {
-    if (has_session() || (allow_api_key && has_api_key())) fn();
+static void on_auth(const char *path, HTTPMethod method, std::function<void()> fn) {
+  s_server.on(path, method, [fn] {
+    if (has_session()) fn();
     else send_error(401, "Authentification requise");
   });
 }
@@ -362,21 +358,6 @@ static void handle_logout() {
   send_json(200, d);
 }
 
-static void handle_apikey_get() {
-  JsonDocument d;
-  d["key"] = s_api_key;
-  send_json(200, d);
-}
-
-static void handle_apikey_regen() {
-  s_api_key = random_hex(16);
-  Preferences p;
-  p.begin("web", false);
-  p.putString("apikey", s_api_key);
-  p.end();
-  handle_apikey_get();
-}
-
 const String &web_password() { return s_pin; }
 
 static void web_task(void *) {
@@ -400,16 +381,12 @@ void web_begin() {
   s_pin = pin;
   Preferences p;
   p.begin("web", false);
-  s_api_key = p.getString("apikey", "");
-  if (s_api_key.length() != 32) {
-    s_api_key = random_hex(16);
-    p.putString("apikey", s_api_key);
-  }
+  if (p.isKey("apikey")) p.remove("apikey");   // Ancienne cle API : effacee
   p.end();
   Serial.printf("[WEB] Mot de passe de cette session : %s\n", s_pin.c_str());
 
-  const char *headers[] = {"Cookie", "Authorization"};
-  s_server.collectHeaders(headers, 2);
+  const char *headers[] = {"Cookie"};
+  s_server.collectHeaders(headers, 1);
 
   s_server.on("/", HTTP_GET, handle_index);   // Page de connexion si pas de session
   s_server.on("/api/login", HTTP_POST, handle_login);
@@ -424,11 +401,9 @@ void web_begin() {
   on_auth("/api/ha/services", HTTP_GET, handle_ha_services);
   on_auth("/api/ha/state", HTTP_GET, handle_ha_state);
   on_auth("/api/ha/camera", HTTP_GET, handle_ha_camera);
-  on_auth("/api/apikey", HTTP_GET, handle_apikey_get);
-  on_auth("/api/apikey", HTTP_POST, handle_apikey_regen);
-  on_auth("/api/brightness", HTTP_GET, handle_brightness_get, true);
-  on_auth("/api/brightness", HTTP_POST, handle_brightness_post, true);
-  on_auth("/api/battery", HTTP_GET, handle_battery_get, true);   // Lecture possible avec la cle API
+  on_auth("/api/brightness", HTTP_GET, handle_brightness_get);
+  on_auth("/api/brightness", HTTP_POST, handle_brightness_post);
+  on_auth("/api/battery", HTTP_GET, handle_battery_get);
   on_auth("/api/battery", HTTP_POST, handle_battery_post);
   s_server.onNotFound([] { s_server.send(404, "text/plain", "Introuvable"); });
   s_server.begin();

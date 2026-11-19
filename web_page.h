@@ -214,7 +214,7 @@ kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-b
     <div class="out">
       <div class="outhead">
         <h2>Vérifications</h2>
-        <p>L'aperçu utilise la même police (Montserrat), les mêmes tailles et hauteurs de ligne que l'écran. Les accents sont remplacés sur l'écran, et l'aperçu montre le texte tel qu'il sera affiché.</p>
+        <p>L'aperçu utilise la même police (Montserrat), les mêmes tailles et hauteurs de ligne que l'écran. Les accents (é, à, ç, œ…), les guillemets « » et le symbole € s'affichent sur l'écran. Un caractère absent de la police (emoji, etc.) s'affiche « ? », et l'aperçu montre le texte tel qu'il sera affiché.</p>
       </div>
       <ul class="warns" id="warns"></ul>
     </div>
@@ -233,10 +233,6 @@ kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-b
     <div class="fld"><label for="haUrl">Adresse</label><input type="text" id="haUrl" placeholder="http://192.168.1.10:8123" spellcheck="false" autocomplete="off"></div>
     <div class="fld"><label for="haTok">Jeton</label><input type="password" id="haTok" spellcheck="false" autocomplete="off">
       <div class="hint" id="haTokHint"></div></div>
-    <div class="fld"><label for="apiKey">Clé API de l'écran</label>
-      <div class="actions"><input type="text" id="apiKey" readonly spellcheck="false" style="flex:1;min-width:0">
-        <button class="btn" id="apiCopy" type="button">Copier</button><button class="btn danger" id="apiRegen" type="button">Régénérer</button></div>
-      <div class="hint">Permet à Home Assistant de régler la luminosité (<code>/api/brightness</code>) avec l'en-tête <code>Authorization: Bearer &lt;clé&gt;</code>. Le reste de l'interface exige le mot de passe affiché sur l'écran.</div></div>
     <div class="actions">
       <button class="btn" id="haTest">Tester</button>
       <button class="btn primary" id="haSave">Enregistrer</button>
@@ -296,13 +292,12 @@ let SIZES=Object.keys(LH).map(Number);
 let RES={w:800,h:480};
 let ONLINE=false;
 
-// Meme table que deaccent() dans dashboard.cpp : l'apercu montre le texte reel
-const LATIN1='AAAAAAACEEEEIIIIDNOOOOOxOUUUUYPsaaaaaaaceeeeiiiidnooooo/ouuuuypy';
+// Meme regle que deaccent() dans dashboard.cpp : l'apercu montre le texte reel.
+// Police de l'ecran : ASCII + Latin-1 (accents) + œŒ – — ‘ ’ “ ” „ • … €
+const inFont=c=>(c>=0x20&&c<=0x7E)||(c>=0xA0&&c<=0xFF)||c===0x152||c===0x153||c===0x2013||c===0x2014||
+  c===0x2018||c===0x2019||(c>=0x201C&&c<=0x201E)||c===0x2022||c===0x2026||c===0x20AC;
 function devText(s){let o='';for(const ch of String(s??'')){const c=ch.codePointAt(0);
-  if(c<0x80||c===0xB0||c===0x2022)o+=ch;else if(c>=0xC0&&c<=0xFF)o+=LATIN1[c-0xC0];
-  else if(c===0x152)o+='OE';else if(c===0x153)o+='oe';else if(c===0x2018||c===0x2019)o+="'";
-  else if(c===0xAB||c===0xBB||c===0x201C||c===0x201D)o+='"';else if(c===0x2013||c===0x2014)o+='-';
-  else if(c===0xA0)o+=' ';else o+='?';}return o;}
+  if(c===13)continue;o+=(c===10||c===9||inFont(c))?ch:'?';}return o;}
 const nearestSize=s=>SIZES.reduce((a,b)=>Math.abs(b-s)<Math.abs(a-s)?b:a,SIZES[0]);
 
 const TYPES={tile:['Panneau','Fond, regroupe des éléments'],label:['Texte','Texte fixe'],value:['Valeur','Affiche l\'état d\'une entité'],
@@ -844,8 +839,8 @@ function checks(){
     }
     for(const t of [w.text,w.prefix,w.suffix]){
       if(t==null||t==='')continue;const d=devText(t);
-      if(d.includes('?')&&!String(t).includes('?'))W(`<code>${esc(w.id)}</code> : certains caractères de « ${esc(t)} » n'existent pas dans la police et s'afficheront « ? ».`);
-      else if(d!==String(t))W(`<code>${esc(w.id)}</code> : « ${esc(t)} » s'affichera « ${esc(d)} » (police sans accents).`,'info');
+      const q=x=>x.split('?').length;
+      if(q(d)>q(String(t)))W(`<code>${esc(w.id)}</code> : certains caractères de « ${esc(t)} » n'existent pas dans la police de l'écran et s'afficheront « ? » (« ${esc(d)} »). Les accents, œ, « », €, … sont disponibles.`);
     }
   }
   if(!out.length)W('Aucun problème détecté.','none');
@@ -1033,13 +1028,7 @@ async function loadEntities(showMsg){
     renderInspector();
   }catch(e){if(showMsg){m.className='msg err';m.textContent='Entités : '+e.message;}}
 }
-async function loadApiKey(){try{const k=await api('/api/apikey');$('#apiKey').value=k.key;}catch(e){}}
-$('#haBtn').onclick=()=>{$('#haMsg').textContent='';$('#haModal').hidden=false;refreshHa();loadApiKey();$('#haUrl').focus();};
-$('#apiCopy').onclick=()=>{const i=$('#apiKey');i.focus();i.select();const ok=document.execCommand('copy');const m=$('#haMsg');m.className='msg'+(ok?' ok':'');m.textContent=ok?'Clé copiée.':'Clé sélectionnée : Ctrl+C pour copier.';};
-$('#apiRegen').onclick=async()=>{
-  if(!confirm('Générer une nouvelle clé ? L\'ancienne ne fonctionnera plus dans Home Assistant.'))return;
-  try{const k=await post('/api/apikey',{});$('#apiKey').value=k.key;const m=$('#haMsg');m.className='msg ok';m.textContent='Nouvelle clé générée. Mettez à jour Home Assistant.';}catch(e){}
-};
+$('#haBtn').onclick=()=>{$('#haMsg').textContent='';$('#haModal').hidden=false;refreshHa();$('#haUrl').focus();};
 $('#logoutBtn').onclick=async()=>{try{await post('/api/logout',{});}catch(e){}goLogin();};
 $('#haClose').onclick=()=>{$('#haModal').hidden=true;};
 $('#haModal').addEventListener('click',e=>{if(e.target===$('#haModal'))$('#haModal').hidden=true;});

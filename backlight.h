@@ -11,6 +11,7 @@ void backlight_begin();          // Apres lvgl_port_init()
 void backlight_loop();
 
 void backlight_set(int percent); // 0..100, enregistre en NVS (differe)
+void backlight_save_now();       // Ecrit tout de suite la valeur en attente (avant un redemarrage)
 int  backlight_get();
 bool backlight_is_off();
 int  backlight_last_on();        // Derniere valeur non nulle

@@ -62,6 +62,13 @@ void backlight_loop() {
   }
 }
 
+void backlight_save_now() {
+  if (!s_dirty) return;
+  s_dirty = false;
+  s_prefs.putInt("bright", s_applied);
+  s_prefs.putInt("last_on", s_last_on);
+}
+
 void backlight_set(int percent) {
   percent = constrain(percent, 0, 100);
   if (percent == s_target) return;

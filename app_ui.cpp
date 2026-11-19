@@ -13,10 +13,13 @@
 #include <vector>
 #include <algorithm>
 
-// Note : les polices Montserrat de LVGL ne contiennent pas les accents,
-// les textes a l'ecran sont donc ecrits sans accents.
+// Note : les polices lv_font_fr_XX (src/fonts) contiennent les accents (Latin-1),
+// les textes a l'ecran peuvent donc etre accentues (fichiers en UTF-8).
 
-static const uint32_t CONFIG_SCREEN_MS   = 5000;   // Ecran "Connecte" avant le tableau de bord
+// Duree de l'ecran "Connecte" (admin) au demarrage, avant le tableau de bord.
+// Choix proposes sur l'ecran ; valeur enregistree en NVS (espace "ui", cle "admin_s").
+static const uint8_t ADMIN_DELAYS[] = {1, 5, 10, 15};
+static uint8_t s_admin_delay_s = 5;
 static const uint32_t CONNECT_TIMEOUT_MS = 20000;
 static const uint32_t SCAN_FRESH_MS      = 15000;
 
@@ -56,6 +59,15 @@ static lv_obj_t *w_bright, *w_bright_lbl;
 static uint32_t s_bright_version = 0;
 static bool s_auto_dash = true;   // Ouvre le tableau de bord apres la 1re connexion
 
+static void load_admin_delay() {
+  Preferences p;
+  p.begin("ui", true);
+  uint8_t v = p.getUChar("admin_s", 5);
+  p.end();
+  for (uint8_t d : ADMIN_DELAYS)
+    if (d == v) s_admin_delay_s = v;
+}
+
 static void reset_widgets() {
   w_list = w_list_status = w_spinner = w_scan_btn = nullptr;
   w_ta = w_kb = w_eye_lbl = nullptr;
@@ -93,7 +105,7 @@ static lv_obj_t *make_header(lv_obj_t *scr, const char *title) {
   lv_label_set_text(lbl, title);
   lv_label_set_long_mode(lbl, LV_LABEL_LONG_DOT);
   lv_obj_set_width(lbl, 420);
-  lv_obj_set_style_text_font(lbl, &lv_font_montserrat_28, 0);
+  lv_obj_set_style_text_font(lbl, &lv_font_fr_28, 0);
   lv_obj_align(lbl, LV_ALIGN_LEFT_MID, 4, 0);
   return hdr;
 }
@@ -209,12 +221,12 @@ static String reason_text(uint8_t r) {
     case WIFI_REASON_NO_AP_FOUND_W_COMPATIBLE_SECURITY:
     case WIFI_REASON_NO_AP_FOUND_IN_AUTHMODE_THRESHOLD:
     case WIFI_REASON_NO_AP_FOUND_IN_RSSI_THRESHOLD:
-      return "Reseau introuvable";
+      return "Réseau introuvable";
     case WIFI_REASON_ASSOC_FAIL:
     case WIFI_REASON_ASSOC_TOOMANY:
-      return "Association refusee par le point d'acces";
+      return "Association refusée par le point d'accès";
     default:
-      return String("Echec (code ") + r + ")";
+      return String("Échec (code ") + r + ")";
   }
 }
 
@@ -223,7 +235,7 @@ static String reason_text(uint8_t r) {
 // ---------------------------------------------------------------------------
 static void on_scan_clicked(lv_event_t *) {
   start_scan();
-  if (w_list_status) lv_label_set_text(w_list_status, "Recherche des reseaux...");
+  if (w_list_status) lv_label_set_text(w_list_status, "Recherche des réseaux…");
   if (w_spinner) lv_obj_remove_flag(w_spinner, LV_OBJ_FLAG_HIDDEN);
   if (w_scan_btn && s_scanning) lv_obj_add_state(w_scan_btn, LV_STATE_DISABLED);
 }
@@ -248,7 +260,7 @@ static void fill_list() {
   if (w_scan_btn) lv_obj_remove_state(w_scan_btn, LV_STATE_DISABLED);
 
   if (s_nets.empty()) {
-    lv_label_set_text(w_list_status, "Aucun reseau trouve. Appuyez sur Scanner.");
+    lv_label_set_text(w_list_status, "Aucun réseau trouvé. Appuyez sur Scanner.");
     return;
   }
   lv_label_set_text_fmt(w_list_status, "%u reseau(x) trouve(s) - touchez un reseau pour vous connecter",
@@ -264,7 +276,7 @@ static void fill_list() {
     lv_obj_t *info = lv_label_create(btn);
     lv_label_set_text_fmt(info, "%s    %ld dBm  (%d%%)    ch %u",
                           n.open ? "Ouvert" : "Securise", (long)n.rssi, signal_quality(n.rssi), n.channel);
-    lv_obj_set_style_text_font(info, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(info, &lv_font_fr_16, 0);
     lv_obj_set_style_text_color(info, lv_color_hex(0xB0BEC5), 0);
     lv_obj_add_event_cb(btn, on_net_clicked, LV_EVENT_CLICKED, (void *)(intptr_t)i);
   }
@@ -272,11 +284,11 @@ static void fill_list() {
 
 static void build_list() {
   lv_obj_t *scr = new_screen();
-  lv_obj_t *hdr = make_header(scr, LV_SYMBOL_WIFI "  Reseaux Wi-Fi");
+  lv_obj_t *hdr = make_header(scr, LV_SYMBOL_WIFI "  Réseaux Wi-Fi");
   w_scan_btn = make_button(hdr, LV_SYMBOL_REFRESH "  Scanner", on_scan_clicked);
   lv_obj_align(w_scan_btn, LV_ALIGN_RIGHT_MID, 0, 0);
 
-  w_list_status = make_label(scr, "Recherche des reseaux...", &lv_font_montserrat_16, 0xB0BEC5);
+  w_list_status = make_label(scr, "Recherche des réseaux…", &lv_font_fr_16, 0xB0BEC5);
   lv_obj_align(w_list_status, LV_ALIGN_TOP_LEFT, 16, 82);
 
   w_spinner = lv_spinner_create(scr);
@@ -384,8 +396,8 @@ static void build_connecting() {
   lv_obj_set_size(sp, 110, 110);
   lv_obj_align(sp, LV_ALIGN_CENTER, 0, -30);
 
-  String msg = String("Connexion a \"") + s_ssid + "\"...";
-  lv_obj_t *l = make_label(scr, msg.c_str(), &lv_font_montserrat_24, 0xFFFFFF);
+  String msg = String("Connexion à \"") + s_ssid + "\"…";
+  lv_obj_t *l = make_label(scr, msg.c_str(), &lv_font_fr_24, 0xFFFFFF);
   lv_obj_align(l, LV_ALIGN_CENTER, 0, 60);
 
   lv_obj_t *c = make_button(scr, LV_SYMBOL_CLOSE "  Annuler", on_cancel_connect);
@@ -406,7 +418,7 @@ static void update_connecting() {
   if (s_disc_count >= 3 && fatal) {
     s_fail_reason = reason_text(r);
   } else if (millis() - s_screen_start > CONNECT_TIMEOUT_MS) {
-    s_fail_reason = r ? reason_text(r) : String("Delai de connexion depasse");
+    s_fail_reason = r ? reason_text(r) : String("Délai de connexion dépassé");
   } else {
     return;
   }
@@ -432,6 +444,61 @@ static void on_forget_network(lv_event_t *) {
 }
 
 static void on_open_dashboard(lv_event_t *) { go(Scr::DASHBOARD); }
+
+// Redemarrage : un premier appui demande confirmation pendant 4 s
+static lv_timer_t *s_reboot_timer = nullptr;
+
+static void reboot_now(lv_timer_t *) {
+  backlight_save_now();
+  Serial.println("[SYS] Redemarrage demande depuis l'ecran");
+  Serial.flush();
+  delay(100);
+  ESP.restart();
+}
+
+static void reboot_disarm(lv_timer_t *t) {
+  lv_obj_t *btn = (lv_obj_t *)lv_timer_get_user_data(t);
+  s_reboot_timer = nullptr;
+  if (lv_obj_is_valid(btn)) lv_label_set_text(lv_obj_get_child(btn, 0), LV_SYMBOL_POWER "  Redémarrer");
+}
+
+static void on_reboot(lv_event_t *e) {
+  lv_obj_t *btn = (lv_obj_t *)lv_event_get_target(e);
+  lv_obj_t *lbl = lv_obj_get_child(btn, 0);
+  if (!s_reboot_timer) {
+    lv_label_set_text(lbl, LV_SYMBOL_WARNING "  Confirmer ?");
+    s_reboot_timer = lv_timer_create(reboot_disarm, 4000, btn);
+    lv_timer_set_repeat_count(s_reboot_timer, 1);
+    return;
+  }
+  lv_timer_delete(s_reboot_timer);
+  s_reboot_timer = nullptr;
+  lv_label_set_text(lbl, "Redémarrage…");
+  lv_obj_add_state(btn, LV_STATE_DISABLED);
+  lv_timer_t *t = lv_timer_create(reboot_now, 300, nullptr);   // Laisse le texte s'afficher
+  lv_timer_set_repeat_count(t, 1);
+}
+
+// Redessine tout l'ecran (fond, calques) : efface d'eventuels restes de l'ancien affichage
+static void full_refresh(lv_timer_t *) {
+  lv_obj_invalidate(lv_screen_active());
+  lv_obj_invalidate(lv_layer_top());
+  lv_obj_invalidate(lv_layer_sys());
+}
+
+static void on_admin_delay_changed(lv_event_t *e) {
+  lv_obj_t *m = (lv_obj_t *)lv_event_get_target(e);
+  uint32_t i = lv_buttonmatrix_get_selected_button(m);
+  if (i >= sizeof(ADMIN_DELAYS)) return;
+  s_auto_dash = false;   // L'utilisateur regle l'ecran : on reste ici
+  if (ADMIN_DELAYS[i] == s_admin_delay_s) return;
+  s_admin_delay_s = ADMIN_DELAYS[i];
+  Preferences p;          // Ecriture unique, seulement sur action de l'utilisateur
+  p.begin("ui", false);
+  p.putUChar("admin_s", s_admin_delay_s);
+  p.end();
+  Serial.printf("[UI] Ecran admin au demarrage : %u s\n", s_admin_delay_s);
+}
 
 static void on_bright_changed(lv_event_t *) {
   if (!w_bright) return;
@@ -470,7 +537,7 @@ static void update_connected_info() {
              ip.c_str(), DEVICE_HOSTNAME);
     set_text_if_changed(w_cfg, buf);
   } else {
-    set_text_if_changed(w_ip, "Reconnexion...");
+    set_text_if_changed(w_ip, "Reconnexion…");
   }
   if ((int)up != last_up) {
     last_up = up;
@@ -482,9 +549,9 @@ static void update_connected_info() {
   if (battery_valid()) snprintf(batt, sizeof(batt), "%.2f V (%d %%)", battery_voltage(), battery_percent());
   else snprintf(batt, sizeof(batt), "%s", battery_enabled() ? "mesure invalide" : "non mesuree");
   snprintf(buf, sizeof(buf),
-           "Reseau :  %s   -   %ld dBm (%d%%)   -   canal %ld\n"
+           "Réseau :  %s   -   %ld dBm (%d%%)   -   canal %ld\n"
            "Masque :  %s      Passerelle :  %s      DNS :  %s\n"
-           "MAC :  %s      Nom d'hote :  %s      Ecran :  %d Hz\n"
+           "MAC :  %s      Nom d'hôte :  %s      Écran :  %d Hz\n"
            "Home Assistant :  %s      Batterie :  %s\n"
            "Tableau de bord :  %s",
            WiFi.SSID().c_str(), (long)rssi, signal_quality(rssi), (long)WiFi.channel(),
@@ -492,7 +559,7 @@ static void update_connected_info() {
            WiFi.dnsIP().toString().c_str(), WiFi.macAddress().c_str(), WiFi.getHostname(),
            (int)lroundf(lcd_refresh_hz()), ha_status_text().c_str(), batt,
            has_layout ? "pret  (appui long de 3 s sur le fond pour revenir ici)"
-                      : "aucun - creez-le depuis la page de configuration");
+                      : "aucun – créez-le depuis la page de configuration");
   set_text_if_changed(w_info, buf);
   if (w_dash_btn && lv_obj_has_state(w_dash_btn, LV_STATE_DISABLED) == has_layout) {
     if (has_layout) lv_obj_remove_state(w_dash_btn, LV_STATE_DISABLED);
@@ -502,51 +569,77 @@ static void update_connected_info() {
 
 static void build_connected() {
   lv_obj_t *scr = new_screen();
-  lv_obj_t *hdr = make_header(scr, LV_SYMBOL_OK "  Connecte");
+  lv_obj_t *hdr = make_header(scr, LV_SYMBOL_OK "  Connecté");
 
   // Mot de passe de la page de configuration (nouveau a chaque demarrage)
   String pw = String("Mot de passe :  ") + web_password();
-  lv_obj_t *pwl = make_label(hdr, pw.c_str(), &lv_font_montserrat_28, 0xFFD54F);
+  lv_obj_t *pwl = make_label(hdr, pw.c_str(), &lv_font_fr_28, 0xFFD54F);
   lv_obj_align(pwl, LV_ALIGN_RIGHT_MID, -4, 0);
 
-  lv_obj_t *cap = make_label(scr, "Adresse IP", &lv_font_montserrat_20, 0x9E9E9E);
+  lv_obj_t *cap = make_label(scr, "Adresse IP", &lv_font_fr_20, 0x9E9E9E);
   lv_obj_align(cap, LV_ALIGN_TOP_MID, 0, 76);
-  w_ip = make_label(scr, "", &lv_font_montserrat_48, 0x66BB6A);
+  w_ip = make_label(scr, "", &lv_font_fr_48, 0x66BB6A);
   lv_obj_align(w_ip, LV_ALIGN_TOP_MID, 0, 100);
 
-  w_cfg = make_label(scr, "", &lv_font_montserrat_20, 0x80DEEA);
+  w_cfg = make_label(scr, "", &lv_font_fr_20, 0x80DEEA);
   lv_obj_align(w_cfg, LV_ALIGN_TOP_MID, 0, 166);
 
-  w_info = make_label(scr, "", &lv_font_montserrat_16, 0xE0E0E0);
+  w_info = make_label(scr, "", &lv_font_fr_16, 0xE0E0E0);
   lv_obj_set_style_text_line_space(w_info, 8, 0);
   lv_obj_align(w_info, LV_ALIGN_TOP_LEFT, 40, 214);
 
   // Luminosite de l'ecran (5..100 % : le curseur n'eteint jamais l'ecran)
-  lv_obj_t *bl = make_label(scr, LV_SYMBOL_IMAGE "  Luminosite", &lv_font_montserrat_20, 0xE0E0E0);
-  lv_obj_align(bl, LV_ALIGN_TOP_LEFT, 40, 360);
+  lv_obj_t *bl = make_label(scr, LV_SYMBOL_IMAGE "  Luminosité", &lv_font_fr_20, 0xE0E0E0);
+  lv_obj_align(bl, LV_ALIGN_TOP_LEFT, 24, 360);
   w_bright = lv_slider_create(scr);
-  lv_obj_set_size(w_bright, 440, 18);
-  lv_obj_align(w_bright, LV_ALIGN_TOP_LEFT, 210, 364);
+  lv_obj_set_size(w_bright, 190, 18);
+  lv_obj_align(w_bright, LV_ALIGN_TOP_LEFT, 180, 364);
   lv_slider_set_range(w_bright, 5, 100);
   lv_obj_add_event_cb(w_bright, on_bright_changed, LV_EVENT_VALUE_CHANGED, nullptr);
-  w_bright_lbl = make_label(scr, "", &lv_font_montserrat_20, 0xE0E0E0);
-  lv_obj_align(w_bright_lbl, LV_ALIGN_TOP_LEFT, 680, 360);
+  w_bright_lbl = make_label(scr, "", &lv_font_fr_20, 0xE0E0E0);
+  lv_obj_align(w_bright_lbl, LV_ALIGN_TOP_LEFT, 388, 360);
+
+  // Duree de cet ecran au demarrage avant l'ouverture du tableau de bord
+  lv_obj_t *dl = make_label(scr, LV_SYMBOL_HOME "  Démarrage", &lv_font_fr_20, 0xE0E0E0);
+  lv_obj_align(dl, LV_ALIGN_TOP_LEFT, 456, 360);
+  static const char *DELAY_MAP[] = {"1 s", "5 s", "10 s", "15 s", ""};
+  lv_obj_t *dm = lv_buttonmatrix_create(scr);
+  lv_buttonmatrix_set_map(dm, DELAY_MAP);
+  lv_buttonmatrix_set_button_ctrl_all(dm, LV_BUTTONMATRIX_CTRL_CHECKABLE);
+  lv_buttonmatrix_set_one_checked(dm, true);
+  for (size_t i = 0; i < sizeof(ADMIN_DELAYS); i++)
+    if (ADMIN_DELAYS[i] == s_admin_delay_s) lv_buttonmatrix_set_button_ctrl(dm, i, LV_BUTTONMATRIX_CTRL_CHECKED);
+  lv_obj_set_size(dm, 188, 44);
+  lv_obj_align(dm, LV_ALIGN_TOP_LEFT, 600, 350);
+  lv_obj_set_style_pad_all(dm, 3, 0);
+  lv_obj_set_style_pad_gap(dm, 3, 0);
+  lv_obj_set_style_text_font(dm, &lv_font_fr_16, 0);
+  lv_obj_add_event_cb(dm, on_admin_delay_changed, LV_EVENT_VALUE_CHANGED, nullptr);
   s_bright_version = 0;
   sync_bright_slider();
 
   w_dash_btn = make_button(scr, LV_SYMBOL_HOME "  Tableau de bord", on_open_dashboard);
-  lv_obj_t *chg = make_button(scr, LV_SYMBOL_REFRESH "  Changer de reseau", on_change_network);
-  lv_obj_t *fg = make_button(scr, LV_SYMBOL_TRASH "  Oublier ce reseau", on_forget_network);
+  lv_obj_t *chg = make_button(scr, LV_SYMBOL_REFRESH "  Changer de réseau", on_change_network);
+  lv_obj_t *fg = make_button(scr, LV_SYMBOL_TRASH "  Oublier ce réseau", on_forget_network);
   lv_obj_set_style_bg_color(fg, lv_palette_main(LV_PALETTE_RED), 0);
-  lv_obj_t *btns[3] = {w_dash_btn, chg, fg};
-  for (int i = 0; i < 3; i++) {
-    lv_obj_set_width(btns[i], 240);
-    lv_obj_align(btns[i], LV_ALIGN_BOTTOM_MID, (i - 1) * 256, -16);
+  lv_obj_t *rb = make_button(scr, LV_SYMBOL_POWER "  Redémarrer", on_reboot);
+  lv_obj_set_style_bg_color(rb, lv_palette_darken(LV_PALETTE_ORANGE, 2), 0);
+  s_reboot_timer = nullptr;
+  lv_obj_t *btns[4] = {w_dash_btn, chg, fg, rb};
+  for (int i = 0; i < 4; i++) {
+    lv_obj_set_width(btns[i], 184);
+    lv_obj_set_style_text_font(btns[i], &lv_font_fr_16, 0);
+    lv_obj_align(btns[i], LV_ALIGN_BOTTOM_MID, (2 * i - 3) * 98, -16);
   }
 
   s_last_up = -1;
   update_connected_info();
   load_screen(scr);
+  // Rafraichissement complet tout de suite, puis une fois l'ancien affichage
+  // (tableau de bord, fondu) entierement detruit.
+  full_refresh(nullptr);
+  lv_timer_t *t = lv_timer_create(full_refresh, 400, nullptr);
+  lv_timer_set_repeat_count(t, 1);
 }
 
 // ---------------------------------------------------------------------------
@@ -560,15 +653,15 @@ static void on_edit_password(lv_event_t *) {
 
 static void build_failed() {
   lv_obj_t *scr = new_screen();
-  make_header(scr, LV_SYMBOL_WARNING "  Echec de connexion");
+  make_header(scr, LV_SYMBOL_WARNING "  Échec de connexion");
 
-  String msg = String("Impossible de se connecter a \"") + s_ssid + "\"";
-  lv_obj_t *l1 = make_label(scr, msg.c_str(), &lv_font_montserrat_24, 0xFFFFFF);
+  String msg = String("Impossible de se connecter à \"") + s_ssid + "\"";
+  lv_obj_t *l1 = make_label(scr, msg.c_str(), &lv_font_fr_24, 0xFFFFFF);
   lv_obj_align(l1, LV_ALIGN_TOP_MID, 0, 140);
-  lv_obj_t *l2 = make_label(scr, s_fail_reason.c_str(), &lv_font_montserrat_28, 0xEF5350);
+  lv_obj_t *l2 = make_label(scr, s_fail_reason.c_str(), &lv_font_fr_28, 0xEF5350);
   lv_obj_align(l2, LV_ALIGN_TOP_MID, 0, 190);
 
-  lv_obj_t *b1 = make_button(scr, LV_SYMBOL_REFRESH "  Reessayer", on_retry);
+  lv_obj_t *b1 = make_button(scr, LV_SYMBOL_REFRESH "  Réessayer", on_retry);
   lv_obj_t *b2 = make_button(scr, LV_SYMBOL_EDIT "  Mot de passe", on_edit_password);
   lv_obj_t *b3 = make_button(scr, LV_SYMBOL_LIST "  Liste", on_back_to_list);
   lv_obj_t *btns[3] = {b1, b2, b3};
@@ -615,6 +708,7 @@ static void enter(Scr s) {
 
 void app_ui_begin() {
   s_prefs.begin("wifi", false);
+  load_admin_delay();
 
   WiFi.setHostname(DEVICE_HOSTNAME);
   WiFi.mode(WIFI_STA);
@@ -648,7 +742,7 @@ void app_ui_loop() {
   if (millis() - s_last_log >= 5000) {
     s_last_log = millis();
     Serial.printf("[ETAT] Ecran %.1f Hz | Wi-Fi %s | SRAM libre %lu Ko | PSRAM libre %lu Ko\n",
-                  lcd_refresh_hz(), WiFi.status() == WL_CONNECTED ? WiFi.localIP().toString().c_str() : "deconnecte",
+                  lcd_refresh_hz(), WiFi.status() == WL_CONNECTED ? WiFi.localIP().toString().c_str() : "déconnecté",
                   (unsigned long)(ESP.getFreeHeap() >> 10), (unsigned long)(ESP.getFreePsram() >> 10));
   }
 
@@ -666,7 +760,7 @@ void app_ui_loop() {
         s_last_info = millis();
         update_connected_info();
       }
-      if (s_auto_dash && millis() - s_screen_start > CONFIG_SCREEN_MS) {
+      if (s_auto_dash && millis() - s_screen_start > s_admin_delay_s * 1000UL) {
         s_auto_dash = false;
         if (layout_exists()) go(Scr::DASHBOARD);
       }
