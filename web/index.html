@@ -276,9 +276,65 @@ kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-b
   </div>
 </div>
 
+<script src="/lang.js"></script>
 <script>
 (()=>{
 const $=s=>document.querySelector(s);
+
+/* ---------- langue (FR / EN, choisie sur l'ecran admin du panneau) ---------- */
+// /lang.js definit window.LANG. Seule l'interface est traduite : les textes des
+// tableaux de bord crees par l'utilisateur ne le sont jamais.
+const EN=window.LANG==='en';
+const tr=(fr,en)=>EN?en:fr;
+const plural=n=>n>1?'s':'';
+// HTML statique : texte (ou contenu HTML) francais -> anglais
+const HTML_EN={
+  'Panneau HA':'HA Panel','hors ligne':'offline','Pages':'Pages',
+  "Luminosité de l'écran (0 % = rétroéclairage éteint, un toucher le rallume)":'Screen brightness (0 % = backlight off, a touch turns it back on)',
+  "Luminosité de l'écran":'Screen brightness',
+  'Annuler (Ctrl+Z)':'Undo (Ctrl+Z)','Annuler':'Undo','Mesure de la batterie':'Battery measurement','Batterie':'Battery','Projet':'Project',
+  "Enregistrer sur l'écran":'Save to screen','Se déconnecter de la configuration':'Log out of the setup page','Déconnexion':'Log out',
+  'Un brouillon non enregistré a été trouvé dans ce navigateur.':'An unsaved draft was found in this browser.',
+  'Restaurer le brouillon':'Restore draft','Ignorer':'Dismiss','Ajouter':'Add',
+  'Glissez pour déplacer, tirez les poignées bleues pour redimensionner. <kbd>←↑→↓</kbd> 1 px, avec <kbd>Maj</kbd> le pas de la grille. <kbd>Suppr</kbd> supprime, <kbd>Ctrl</kbd>+<kbd>D</kbd> duplique, <kbd>Ctrl</kbd>+<kbd>Z</kbd> annule.':
+    'Drag to move, pull the blue handles to resize. <kbd>←↑→↓</kbd> 1 px, with <kbd>Shift</kbd> the grid step. <kbd>Del</kbd> deletes, <kbd>Ctrl</kbd>+<kbd>D</kbd> duplicates, <kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes.',
+  "<kbd>Maj</kbd>/<kbd>Ctrl</kbd>+clic sélectionne plusieurs éléments, <kbd>Ctrl</kbd>+<kbd>A</kbd> toute la page. <kbd>Ctrl</kbd>+<kbd>C</kbd>, <kbd>X</kbd>, <kbd>V</kbd> copient, coupent et collent, aussi d'une page à l'autre ou entre deux onglets. <kbd>R</kbd> pivote de 90° (<kbd>Maj</kbd>+<kbd>R</kbd> dans l'autre sens).":
+    '<kbd>Shift</kbd>/<kbd>Ctrl</kbd>+click selects several elements, <kbd>Ctrl</kbd>+<kbd>A</kbd> the whole page. <kbd>Ctrl</kbd>+<kbd>C</kbd>, <kbd>X</kbd>, <kbd>V</kbd> copy, cut and paste, also between pages or browser tabs. <kbd>R</kbd> rotates by 90° (<kbd>Shift</kbd>+<kbd>R</kbd> the other way).',
+  "Sur l'écran, un appui long de 3 s sur le fond d'une page ouvre l'écran de configuration (IP, Wi-Fi, luminosité). Un bouton d'action réglé sur « Ouvrir l'écran de configuration » y mène aussi.":
+    'On the panel, a 3 s long press on the background of a page opens the setup screen (IP, Wi-Fi, brightness). An action button set to “Open the setup screen” also leads there.',
+  "Luminosité : utilisez l'entité <code>screen.brightness</code> (curseur, jauge, valeur) ou <code>screen.backlight</code> (bouton, interrupteur).":
+    'Brightness: use the <code>screen.brightness</code> entity (slider, gauge, value) or <code>screen.backlight</code> (button, switch).',
+  'Grille':'Grid','Libre':'Free','Afficher':'Show','Ajuster':'Fit','100 % (taille réelle en pixels)':'100 % (actual pixel size)',
+  'Vérifications':'Checks',
+  "L'aperçu utilise la même police (Montserrat), les mêmes tailles et hauteurs de ligne que l'écran. Les accents (é, à, ç, œ…), les guillemets « » et le symbole € s'affichent sur l'écran. Un caractère absent de la police (emoji, etc.) s'affiche « ? », et l'aperçu montre le texte tel qu'il sera affiché.":
+    'The preview uses the same font (Montserrat), sizes and line heights as the panel. Accented letters (é, à, ç, œ…), quotes « » and the € sign are shown on the panel. A character missing from the font (emoji, etc.) is shown as “?”, and the preview shows the text exactly as it will appear.',
+  'Connexion à Home Assistant':'Home Assistant connection',
+  "L'écran utilise l'API REST de Home Assistant. Créez un jeton dans Home Assistant : <b>Profil → Sécurité → Jetons d'accès longue durée</b>. Utilisez de préférence l'adresse IP (ex. <code>http://192.168.1.10:8123</code>).":
+    'The panel uses the Home Assistant REST API. Create a token in Home Assistant: <b>Profile → Security → Long-lived access tokens</b>. Preferably use the IP address (e.g. <code>http://192.168.1.10:8123</code>).',
+  'Adresse':'Address','Jeton':'Token','Tester':'Test','Enregistrer':'Save','Recharger les entités':'Reload entities','Fermer':'Close',
+  "<b>Charge :</b> elle est entièrement gérée par la puce CS8501 de la carte (580 mA), dès que la carte reçoit du 5 V par USB. Aucun réglage logiciel ne peut l'activer ni la bloquer. Pendant la charge, le voyant <b>CHG</b> est allumé, puis <b>DONE</b> quand elle est terminée.":
+    '<b>Charging:</b> it is fully handled by the board’s CS8501 chip (580 mA) as soon as the board receives 5 V over USB. No software setting can enable or block it. While charging, the <b>CHG</b> LED is on, then <b>DONE</b> when it is finished.',
+  "<b>Mesure :</b> la tension de la batterie n'est reliée à aucune entrée de l'ESP32 sur cette carte. Pour l'afficher, ajoutez un pont diviseur entre le + de la batterie et le connecteur <b>Sensor AD</b> (GPIO6) : 100 kΩ du + batterie vers AD, 100 kΩ de AD vers GND (rapport 2). N'activez la mesure qu'après ce câblage : sinon, l'entrée flotte et les valeurs sont fausses.":
+    '<b>Measurement:</b> the battery voltage is not wired to any ESP32 input on this board. To show it, add a voltage divider between battery + and the <b>Sensor AD</b> connector (GPIO6): 100 kΩ from battery + to AD, 100 kΩ from AD to GND (ratio 2). Only enable the measurement after this wiring: otherwise the input floats and the readings are wrong.',
+  'Mesure activée':'Measurement enabled','Rapport du pont':'Divider ratio',
+  "(R1 + R2) / R2. Ajustez-le pour que la tension affichée corresponde à celle d'un multimètre.":'(R1 + R2) / R2. Adjust it so the displayed voltage matches a multimeter.',
+  'Entités du designer : <code>screen.battery</code> (%) et <code>screen.battery_voltage</code> (V). Le pourcentage est une estimation à partir de la tension : pendant la charge, il paraît plus élevé que la réalité.':
+    'Designer entities: <code>screen.battery</code> (%) and <code>screen.battery_voltage</code> (V). The percentage is estimated from the voltage: while charging, it looks higher than it really is.',
+  "Le tableau de bord est enregistré sur l'écran avec le bouton « Enregistrer sur l'écran ». Pour garder une copie ou la transférer, enregistrez-le dans un fichier (ou copiez le texte ci-dessous). Pour ouvrir un projet, choisissez son fichier ou collez son texte puis appuyez sur Charger.":
+    'The dashboard is stored on the panel with the “Save to screen” button. To keep a copy or transfer it, save it to a file (or copy the text below). To open a project, choose its file or paste its text, then press Load.',
+  'Texte du projet':'Project text','Enregistrer le fichier':'Save file','Ouvrir un fichier…':'Open file…','Copier':'Copy','Charger':'Load','Exemple':'Example','Projet vide':'Blank project'
+};
+function translateDom(){
+  if(!EN)return;
+  document.documentElement.lang='en';document.title=HTML_EN[document.title]||document.title;
+  for(const el of document.body.querySelectorAll('*')){
+    if(el.tagName==='SCRIPT'||el.tagName==='STYLE')continue;
+    for(const a of ['title','placeholder','aria-label']){const v=el.getAttribute(a);if(v&&HTML_EN[v])el.setAttribute(a,HTML_EN[v]);}
+    if(el.children.length){const k=el.innerHTML.trim();if(HTML_EN[k]){el.innerHTML=HTML_EN[k];continue;}}
+    for(const n of el.childNodes)if(n.nodeType===3){const k=n.nodeValue.trim();if(k&&HTML_EN[k])n.nodeValue=n.nodeValue.replace(k,HTML_EN[k]);}
+  }
+}
+translateDom();
 const DRAFT_KEY='ha-panel-draft-v1';
 
 /* ---------- Ecran ---------- */
@@ -296,10 +352,10 @@ function devText(s){let o='';for(const ch of String(s??'')){const c=ch.codePoint
   if(c===13)continue;o+=(c===10||c===9||inFont(c))?ch:'?';}return o;}
 const nearestSize=s=>SIZES.reduce((a,b)=>Math.abs(b-s)<Math.abs(a-s)?b:a,SIZES[0]);
 
-const TYPES={tile:['Panneau','Fond, regroupe des éléments'],label:['Texte','Texte fixe'],value:['Valeur','Affiche l\'état d\'une entité'],
-  toggle:['Bouton bascule','S\'allume quand l\'entité est active'],action:['Bouton d\'action','Script, scène ou page'],switch:['Interrupteur','Marche/arrêt d\'une entité'],
-  slider:['Curseur','Luminosité ou nombre'],arc:['Jauge','Valeur sur un arc'],bar:['Barre','Valeur en barre'],
-  camera:['Caméra','Image en direct d\'une caméra']};
+const TYPES={tile:[tr('Panneau','Panel'),tr('Fond, regroupe des éléments','Background, groups elements')],label:[tr('Texte','Text'),tr('Texte fixe','Fixed text')],value:[tr('Valeur','Value'),tr('Affiche l\'état d\'une entité','Shows an entity state')],
+  toggle:[tr('Bouton bascule','Toggle button'),tr('S\'allume quand l\'entité est active','Lights up when the entity is on')],action:[tr('Bouton d\'action','Action button'),tr('Script, scène ou page','Script, scene or page')],switch:[tr('Interrupteur','Switch'),tr('Marche/arrêt d\'une entité','Turns an entity on/off')],
+  slider:[tr('Curseur','Slider'),tr('Luminosité ou nombre','Brightness or number')],arc:[tr('Jauge','Gauge'),tr('Valeur sur un arc','Value on an arc')],bar:[tr('Barre','Bar'),tr('Valeur en barre','Value as a bar')],
+  camera:[tr('Caméra','Camera'),tr('Image en direct d\'une caméra','Live camera image')]};
 const PREFIX={tile:'tile',label:'lbl',value:'val',toggle:'btn',action:'act',switch:'sw',slider:'sld',arc:'gauge',bar:'bar',camera:'cam'};
 const ICON={
   tile:'<rect x="3" y="5" width="16" height="12" rx="3" fill="currentColor" opacity=".35"/>',
@@ -318,10 +374,10 @@ function defaults(t){
   const txt={size:24,color:'#FFFFFF'};
   switch(t){
     case 'tile': return {w:240,h:160,bg:'#2A2D34',radius:16,borderW:0,borderColor:'#454B57'};
-    case 'label': return {w:220,h:0,text:'Texte',...txt,align:'LEFT'};
+    case 'label': return {w:220,h:0,text:tr('Texte','Text'),...txt,align:'LEFT'};
     case 'value': return {w:240,h:0,entity:'',attribute:'',valueType:'number',decimals:1,prefix:'',suffix:'°C',sample:'21.4',...txt,size:48,align:'LEFT'};
-    case 'toggle': return {w:200,h:120,text:'Cuisine',entity:'',action:'',...txt,size:20,bg:'#2A2D34',onBg:'#F2B233',onColor:'#1A1A1A',radius:16,previewOn:false};
-    case 'action': return {w:200,h:80,text:'Bonne nuit',mode:'ha',entity:'',action:'',target:'',...txt,size:20,bg:'#3B4252',radius:12};
+    case 'toggle': return {w:200,h:120,text:tr('Cuisine','Kitchen'),entity:'',action:'',...txt,size:20,bg:'#2A2D34',onBg:'#F2B233',onColor:'#1A1A1A',radius:16,previewOn:false};
+    case 'action': return {w:200,h:80,text:tr('Bonne nuit','Good night'),mode:'ha',entity:'',action:'',target:'',...txt,size:20,bg:'#3B4252',radius:12};
     case 'switch': return {w:100,h:50,entity:'',action:'',bg:'#454B57',onBg:'#4CAF7A',knob:'#FFFFFF',previewOn:true};
     case 'slider': return {w:320,h:24,entity:'',min:0,max:255,action:'',bg:'#454B57',onBg:'#F2B233',knob:'#FFFFFF',sample:'160'};
     case 'arc': return {w:180,h:180,entity:'',attribute:'',min:0,max:100,thick:16,bg:'#3A3F48',onBg:'#4FA3E0',showValue:true,decimals:0,suffix:'%',...txt,size:32,sample:'46'};
@@ -335,23 +391,23 @@ function sample(){
   return {res:{...RES},snap:8,grid:true,cur:0,pages:[
     {id:'page_main',bg:'#15171C',widgets:[
       W('tile',{id:'tile_temp',x:24,y:24,w:360,h:200}),
-      W('label',{id:'lbl_outside',x:48,y:44,w:300,text:'Extérieur',size:20,color:dim}),
+      W('label',{id:'lbl_outside',x:48,y:44,w:300,text:tr('Extérieur','Outside'),size:20,color:dim}),
       W('value',{id:'val_outside',x:48,y:96,w:312,entity:'sensor.outdoor_temperature',size:48}),
-      W('toggle',{id:'btn_living',x:416,y:24,w:172,h:200,text:'Salon',entity:'light.living_room',previewOn:true}),
-      W('toggle',{id:'btn_kitchen',x:604,y:24,w:172,h:200,text:'Cuisine',entity:'light.kitchen'}),
+      W('toggle',{id:'btn_living',x:416,y:24,w:172,h:200,text:tr('Salon','Living room'),entity:'light.living_room',previewOn:true}),
+      W('toggle',{id:'btn_kitchen',x:604,y:24,w:172,h:200,text:tr('Cuisine','Kitchen'),entity:'light.kitchen'}),
       W('tile',{id:'tile_dim',x:24,y:248,w:360,h:208}),
-      W('label',{id:'lbl_dim',x:48,y:268,w:300,text:'Luminosité du salon',size:18,color:dim}),
+      W('label',{id:'lbl_dim',x:48,y:268,w:300,text:tr('Luminosité du salon','Living room brightness'),size:18,color:dim}),
       W('slider',{id:'sld_living',x:56,y:360,w:296,h:24,entity:'light.living_room'}),
       W('arc',{id:'gauge_humidity',x:416,y:264,w:172,h:172,thick:14,entity:'sensor.humidity'}),
-      W('action',{id:'act_climate',x:604,y:248,w:172,h:208,text:'Climat',mode:'page',target:'page_climate',entity:''})
+      W('action',{id:'act_climate',x:604,y:248,w:172,h:208,text:tr('Climat','Climate'),mode:'page',target:'page_climate',entity:''})
     ]},
     {id:'page_climate',bg:'#15171C',widgets:[
-      W('label',{id:'lbl_climate',x:24,y:24,w:400,text:'Climat',size:36}),
-      W('label',{id:'lbl_indoor',x:24,y:96,w:300,text:'Intérieur',size:20,color:dim}),
+      W('label',{id:'lbl_climate',x:24,y:24,w:400,text:tr('Climat','Climate'),size:36}),
+      W('label',{id:'lbl_indoor',x:24,y:96,w:300,text:tr('Intérieur','Inside'),size:20,color:dim}),
       W('value',{id:'val_indoor',x:24,y:128,w:360,entity:'sensor.indoor_temperature',size:48}),
-      W('label',{id:'lbl_battery',x:24,y:248,w:360,text:'Batterie du téléphone',size:18,color:dim}),
+      W('label',{id:'lbl_battery',x:24,y:248,w:360,text:tr('Batterie du téléphone','Phone battery'),size:18,color:dim}),
       W('bar',{id:'bar_battery',x:24,y:280,w:360,h:20,entity:'sensor.phone_battery_level'}),
-      W('action',{id:'act_back',x:24,y:400,w:160,h:56,text:'Retour',mode:'page',target:'page_main',entity:''})
+      W('action',{id:'act_back',x:24,y:400,w:160,h:56,text:tr('Retour','Back'),mode:'page',target:'page_main',entity:''})
     ]}
   ]};
 }
@@ -389,15 +445,15 @@ const isText=w=>w.type==='label'||w.type==='value';
 const layoutKey=o=>JSON.stringify({...o,cur:0});
 
 // Entites locales de l'ecran (gerees par le firmware, pas par Home Assistant)
-const LOCAL_ENT=[['screen.brightness','Écran : luminosité (0 à 100 %)'],['screen.backlight','Écran : rétroéclairage (marche/arrêt)'],
-  ['screen.battery','Écran : batterie (%) — lecture seule'],['screen.battery_voltage','Écran : tension batterie (V) — lecture seule']];
+const LOCAL_ENT=[['screen.brightness',tr('Écran : luminosité (0 à 100 %)','Screen: brightness (0 to 100 %)')],['screen.backlight',tr('Écran : rétroéclairage (marche/arrêt)','Screen: backlight (on/off)')],
+  ['screen.battery',tr('Écran : batterie (%) — lecture seule','Screen: battery (%) — read only')],['screen.battery_voltage',tr('Écran : tension batterie (V) — lecture seule','Screen: battery voltage (V) — read only')]];
 const READONLY_LOCAL=['screen.battery','screen.battery_voltage'];
 const isLocal=e=>String(e||'').startsWith('screen.');
 
 // Meme logique que default_action() dans dashboard.cpp
 function defaultAction(w){
   const d=dom(w.entity);
-  if(d==='screen')return 'local (écran)';
+  if(d==='screen')return tr('local (écran)','local (screen)');
   if(w.type==='slider')return d==='light'?'light.turn_on':(d?d+'.set_value':'');
   if(w.type==='action')return ({scene:'scene.turn_on',script:'script.turn_on',button:'button.press',input_button:'input_button.press',automation:'automation.trigger'})[d]||'homeassistant.toggle';
   return ['light','switch','fan','input_boolean','cover','media_player','climate'].includes(d)?d+'.toggle':'homeassistant.toggle';
@@ -442,7 +498,7 @@ function paint(el,w){
     case 'camera':{st.background=w.bg;st.overflow='hidden';
       const snap=camSnapshot(w);
       h=snap&&snap.url?`<img class="cam" src="${snap.url}" alt="" style="object-fit:${({cover:'cover',stretch:'fill'})[w.fit]||'contain'}">`
-        :`<div class="ctr cam-ph"><span>${ICON.camera.replace('<rect','<svg viewBox="0 0 22 22" width="40" height="40"><rect')}</svg><br>${esc(w.entity||'Aucune caméra')}${snap&&snap.err?'<br><small>'+esc(snap.err)+'</small>':''}</span></div>`;
+        :`<div class="ctr cam-ph"><span>${ICON.camera.replace('<rect','<svg viewBox="0 0 22 22" width="40" height="40"><rect')}</svg><br>${esc(w.entity||tr('Aucune caméra','No camera'))}${snap&&snap.err?'<br><small>'+esc(snap.err)+'</small>':''}</span></div>`;
       break;}
   }
   el.innerHTML=h;
@@ -456,10 +512,10 @@ function camSnapshot(w){
     s=camSnaps[w.entity]={};
     fetch(`/api/ha/camera?id=${encodeURIComponent(w.entity)}&w=${Math.min(800,w.w|0)}&h=${Math.min(480,w.h|0)}`).then(async r=>{
       if(r.status===401){goLogin();return;}
-      if(!r.ok){let m='Aperçu indisponible';try{m=(await r.json()).message||m;}catch(e){}s.err=m;}
+      if(!r.ok){let m=tr('Aperçu indisponible','Preview unavailable');try{m=(await r.json()).message||m;}catch(e){}s.err=m;}
       else s.url=URL.createObjectURL(await r.blob());
       renderScreen();
-    }).catch(()=>{s.err='Aperçu indisponible';renderScreen();});
+    }).catch(()=>{s.err=tr('Aperçu indisponible','Preview unavailable');renderScreen();});
   }
   return s;
 }
@@ -582,7 +638,7 @@ function copySel(cut){
   const p=clipPayload();if(!p)return null;
   storeClip(p);
   if(cut)delSel();
-  flashMsg(`${p.items.length} élément${p.items.length>1?'s':''} ${cut?'coupé':'copié'}${p.items.length>1?'s':''}`);
+  flashMsg(EN?`${p.items.length} element${plural(p.items.length)} ${cut?'cut':'copied'}`:`${p.items.length} élément${plural(p.items.length)} ${cut?'coupé':'copié'}${plural(p.items.length)}`);
   return p;
 }
 // Colle des elements dans la page courante. offset : decalage force (dupliquer).
@@ -603,9 +659,9 @@ function pasteItems(items,offset){
   }
   sel=ids[0];extra=new Set(ids.slice(1));
   renderScreen();renderInspector();commit();
-  flashMsg(`${ids.length} élément${ids.length>1?'s':''} collé${ids.length>1?'s':''} dans ${p.id}`);
+  flashMsg(EN?`${ids.length} element${plural(ids.length)} pasted into ${p.id}`:`${ids.length} élément${plural(ids.length)} collé${plural(ids.length)} dans ${p.id}`);
 }
-function pasteFromMemory(){const c=readClip();if(c)pasteItems(c.items);else flashMsg('Presse-papiers vide');}
+function pasteFromMemory(){const c=readClip();if(c)pasteItems(c.items);else flashMsg(tr('Presse-papiers vide','Clipboard empty'));}
 const isTyping=el=>/^(INPUT|TEXTAREA|SELECT)$/.test(el?.tagName||'')||el?.isContentEditable;
 document.addEventListener('copy',e=>{
   if(isTyping(document.activeElement)||!modalsClosed())return;
@@ -631,54 +687,55 @@ function layer(dir){const p=pageOf(sel),i=p.widgets.findIndex(w=>w.id===sel),j=i
 /* ---------- inspecteur ---------- */
 const trackish=w=>['switch','slider','arc','bar'].includes(w.type);
 const F={
-  rot:{l:'Rotation',t:'select',num:true,o:[[0,'0°'],[90,'90° (horaire)'],[180,'180°'],[270,'270° (anti-horaire)']],hint:()=>'Autour du centre. X, Y, L et H restent ceux de l\'élément avant rotation.'},
-  text:{l:'Texte',t:'area',hint:w=>devText(w.text)!==String(w.text??'')?'Sur l\'écran : « '+devText(w.text)+' »':''},
-  size:{l:'Taille',t:'select',o:()=>SIZES.map(s=>[s,s+' px'])},
-  color:{l:'Couleur du texte',t:'color'},
-  align:{l:'Alignement',t:'select',o:[['LEFT','Gauche'],['CENTER','Centre'],['RIGHT','Droite']]},
-  bg:{l:w=>trackish(w)?'Piste':'Fond',t:'color'},
-  onBg:{l:w=>w.type==='toggle'?'Couleur active':'Remplissage',t:'color'},
-  onColor:{l:'Texte actif',t:'color'},
-  knob:{l:'Bouton',t:'color'},
-  radius:{l:'Arrondi',t:'num'},
-  borderW:{l:'Bordure',t:'num'},
-  borderColor:{l:'Couleur bordure',t:'color',show:w=>+w.borderW>0},
-  mode:{l:'Au toucher',t:'select',o:[['ha','Action Home Assistant'],['page','Ouvrir une page'],['admin','Ouvrir l\'écran de configuration (IP, Wi-Fi, luminosité)']]},
-  entity:{l:'Entité',t:'entity',ph:'light.cuisine',show:w=>w.type!=='action'||w.mode==='ha',
-    hint:w=>isLocal(w.entity)?'Entité locale de l\'écran':(w.type==='action'?'Facultatif si l\'action n\'a pas besoin d\'entité. screen.backlight allume/éteint l\'écran.':'')},
-  attribute:{l:'Attribut',t:'text',ph:'facultatif',hint:()=>'Lit un attribut au lieu de l\'état, ex. current_temperature'},
+  rot:{l:'Rotation',t:'select',num:true,o:[[0,'0°'],[90,tr('90° (horaire)','90° (clockwise)')],[180,'180°'],[270,tr('270° (anti-horaire)','270° (counter-clockwise)')]],hint:()=>tr('Autour du centre. X, Y, L et H restent ceux de l\'élément avant rotation.','Around the center. X, Y, W and H stay those of the element before rotation.')},
+  text:{l:tr('Texte','Text'),t:'area',hint:w=>devText(w.text)!==String(w.text??'')?tr('Sur l\'écran : « ','On screen: “')+devText(w.text)+tr(' »','”'):''},
+  size:{l:tr('Taille','Size'),t:'select',o:()=>SIZES.map(s=>[s,s+' px'])},
+  color:{l:tr('Couleur du texte','Text color'),t:'color'},
+  align:{l:tr('Alignement','Alignment'),t:'select',o:[['LEFT',tr('Gauche','Left')],['CENTER',tr('Centre','Center')],['RIGHT',tr('Droite','Right')]]},
+  bg:{l:w=>trackish(w)?tr('Piste','Track'):tr('Fond','Background'),t:'color'},
+  onBg:{l:w=>w.type==='toggle'?tr('Couleur active','Active color'):tr('Remplissage','Fill'),t:'color'},
+  onColor:{l:tr('Texte actif','Active text'),t:'color'},
+  knob:{l:tr('Bouton','Knob'),t:'color'},
+  radius:{l:tr('Arrondi','Radius'),t:'num'},
+  borderW:{l:tr('Bordure','Border'),t:'num'},
+  borderColor:{l:tr('Couleur bordure','Border color'),t:'color',show:w=>+w.borderW>0},
+  mode:{l:tr('Au toucher','On tap'),t:'select',o:[['ha',tr('Action Home Assistant','Home Assistant action')],['page',tr('Ouvrir une page','Open a page')],['admin',tr('Ouvrir l\'écran de configuration (IP, Wi-Fi, luminosité)','Open the setup screen (IP, Wi-Fi, brightness)')]]},
+  entity:{l:tr('Entité','Entity'),t:'entity',ph:'light.cuisine',show:w=>w.type!=='action'||w.mode==='ha',
+    hint:w=>isLocal(w.entity)?tr('Entité locale de l\'écran','Local screen entity'):(w.type==='action'?tr('Facultatif si l\'action n\'a pas besoin d\'entité. screen.backlight allume/éteint l\'écran.','Optional if the action needs no entity. screen.backlight turns the screen on/off.'):'')},
+  attribute:{l:tr('Attribut','Attribute'),t:'text',ph:tr('facultatif','optional'),hint:()=>tr('Lit un attribut au lieu de l\'état, ex. current_temperature','Reads an attribute instead of the state, e.g. current_temperature')},
   action:{l:'Action',t:'service',ph:w=>defaultAction(w),show:w=>(w.type!=='action'||w.mode==='ha')&&!isLocal(w.entity),
-    hint:w=>serviceOptions(w)?'Actions de Home Assistant disponibles pour le domaine '+dom(w.entity)+'.':(w.entity?'Liste indisponible : vérifiez la connexion à Home Assistant. Texte libre : domaine.service.':'Choisissez d\'abord une entité.')},
-  field:{l:'Paramètre',t:'select',o:w=>fieldOptions(w),show:w=>w.type==='slider'&&!!w.entity&&!isLocal(w.entity),
-    hint:w=>w.field?'Valeur du curseur envoyée dans « '+w.field+' »':'Vide = brightness (lumière) ou value'},
-  factor:{l:'Facteur',t:'num',show:w=>w.type==='slider'&&!!w.entity&&!isLocal(w.entity),
-    hint:()=>'Valeur envoyée à HA = curseur × facteur (ex. 0,01 : curseur 0 à 100 → volume 0 à 1).'},
+    hint:w=>serviceOptions(w)?tr('Actions de Home Assistant disponibles pour le domaine ','Home Assistant actions available for the domain ')+dom(w.entity)+'.':(w.entity?tr('Liste indisponible : vérifiez la connexion à Home Assistant. Texte libre : domaine.service.','List unavailable: check the Home Assistant connection. Free text: domain.service.'):tr('Choisissez d\'abord une entité.','Choose an entity first.'))},
+  field:{l:tr('Paramètre','Parameter'),t:'select',o:w=>fieldOptions(w),show:w=>w.type==='slider'&&!!w.entity&&!isLocal(w.entity),
+    hint:w=>w.field?tr('Valeur du curseur envoyée dans « ','Slider value sent in “')+w.field+tr(' »','”'):tr('Vide = brightness (lumière) ou value','Empty = brightness (light) or value')},
+  factor:{l:tr('Facteur','Factor'),t:'num',show:w=>w.type==='slider'&&!!w.entity&&!isLocal(w.entity),
+    hint:()=>tr('Valeur envoyée à HA = curseur × facteur (ex. 0,01 : curseur 0 à 100 → volume 0 à 1).','Value sent to HA = slider × factor (e.g. 0.01: slider 0 to 100 → volume 0 to 1).')},
   target:{l:'Page',t:'select',o:()=>S.pages.map(p=>[p.id,p.id]),show:w=>w.mode==='page'},
-  valueType:{l:'L\'état est',t:'select',o:[['number','Un nombre'],['text','Du texte']]},
-  decimals:{l:'Décimales',t:'num',show:w=>w.valueType!=='text'},
-  prefix:{l:'Avant',t:'text'},
-  suffix:{l:'Après',t:'text',ph:'°C'},
-  sample:{l:'Valeur d\'aperçu',t:'text',hint:()=>'Seulement pour cet aperçu'},
-  min:{l:'Min',t:'num'},max:{l:'Max',t:'num',hint:w=>w.entity==='screen.brightness'?'La luminosité de l\'écran va de 0 à 100 %':
-    (autoNote[w.id]?'Plage ajustée automatiquement : '+autoNote[w.id]+'.':(w.type==='slider'&&dom(w.entity)==='light'&&!w.field?'La luminosité d\'une lumière va de 0 à 255':''))},
-  thick:{l:'Épaisseur',t:'num'},
-  previewOn:{l:'Aperçu actif',t:'check'},
-  interval:{l:'Rafraîchissement (ms)',t:'num',hint:()=>'Délai entre deux images (100 ms minimum). La vitesse réelle dépend de la caméra, de la taille et du Wi-Fi : environ 1 à 5 images/s.'},
-  fit:{l:'Cadrage',t:'select',o:[['contain','Image entière'],['cover','Remplir (bords coupés)'],['stretch','Étirer']]},
-  full:{l:'Plein écran au toucher',t:'check',hint:()=>'Toucher l\'image l\'affiche en 800 × 480 ; toucher à nouveau la referme.'},
-  showValue:{l:'Afficher la valeur',t:'check'}
+  valueType:{l:tr('L\'état est','The state is'),t:'select',o:[['number',tr('Un nombre','A number')],['text',tr('Du texte','Text')]]},
+  decimals:{l:tr('Décimales','Decimals'),t:'num',show:w=>w.valueType!=='text'},
+  prefix:{l:tr('Avant','Before'),t:'text'},
+  suffix:{l:tr('Après','After'),t:'text',ph:'°C'},
+  sample:{l:tr('Valeur d\'aperçu','Preview value'),t:'text',hint:()=>tr('Seulement pour cet aperçu','Only for this preview')},
+  min:{l:'Min',t:'num'},max:{l:'Max',t:'num',hint:w=>w.entity==='screen.brightness'?tr('La luminosité de l\'écran va de 0 à 100 %','Screen brightness goes from 0 to 100 %'):
+    (autoNote[w.id]?tr('Plage ajustée automatiquement : ','Range set automatically: ')+autoNote[w.id]+'.':(w.type==='slider'&&dom(w.entity)==='light'&&!w.field?tr('La luminosité d\'une lumière va de 0 à 255','A light\'s brightness goes from 0 to 255'):''))},
+  thick:{l:tr('Épaisseur','Thickness'),t:'num'},
+  previewOn:{l:tr('Aperçu actif','Preview as on'),t:'check'},
+  interval:{l:tr('Rafraîchissement (ms)','Refresh (ms)'),t:'num',hint:()=>tr('Délai entre deux images (100 ms minimum). La vitesse réelle dépend de la caméra, de la taille et du Wi-Fi : environ 1 à 5 images/s.','Delay between two images (100 ms minimum). The real speed depends on the camera, the size and the Wi-Fi: about 1 to 5 images/s.')},
+  fit:{l:tr('Cadrage','Fit'),t:'select',o:[['contain',tr('Image entière','Whole image')],['cover',tr('Remplir (bords coupés)','Fill (edges cropped)')],['stretch',tr('Étirer','Stretch')]]},
+  full:{l:tr('Plein écran au toucher','Full screen on tap'),t:'check',hint:()=>tr('Toucher l\'image l\'affiche en 800 × 480 ; toucher à nouveau la referme.','Tapping the image shows it at 800 × 480; tap again to close it.')},
+  showValue:{l:tr('Afficher la valeur','Show the value'),t:'check'}
 };
+const GA=tr('Apparence','Appearance'),GT=tr('Texte','Text');
 const G={
-  tile:[['Apparence',['bg','radius','borderW','borderColor']]],
-  label:[['Texte',['text','size','color','align']]],
-  value:[['Home Assistant',['entity','attribute','valueType','decimals','prefix','suffix','sample']],['Texte',['size','color','align']]],
-  toggle:[['Home Assistant',['entity','action','previewOn']],['Texte',['text','size']],['Apparence',['bg','color','onBg','onColor','radius']]],
-  action:[['Comportement',['mode','entity','action','target']],['Texte',['text','size']],['Apparence',['bg','color','radius']]],
-  switch:[['Home Assistant',['entity','action','previewOn']],['Apparence',['bg','onBg','knob']]],
-  slider:[['Home Assistant',['entity','action','field','min','max','factor','sample']],['Apparence',['bg','onBg','knob']]],
-  arc:[['Home Assistant',['entity','attribute','min','max','sample']],['Valeur au centre',['showValue','decimals','suffix','size','color']],['Apparence',['thick','bg','onBg']]],
-  bar:[['Home Assistant',['entity','attribute','min','max','sample']],['Apparence',['bg','onBg','radius']]],
-  camera:[['Home Assistant',['entity','interval']],['Affichage',['fit','full','bg']]]
+  tile:[[GA,['bg','radius','borderW','borderColor']]],
+  label:[[GT,['text','size','color','align']]],
+  value:[['Home Assistant',['entity','attribute','valueType','decimals','prefix','suffix','sample']],[GT,['size','color','align']]],
+  toggle:[['Home Assistant',['entity','action','previewOn']],[GT,['text','size']],[GA,['bg','color','onBg','onColor','radius']]],
+  action:[[tr('Comportement','Behavior'),['mode','entity','action','target']],[GT,['text','size']],[GA,['bg','color','radius']]],
+  switch:[['Home Assistant',['entity','action','previewOn']],[GA,['bg','onBg','knob']]],
+  slider:[['Home Assistant',['entity','action','field','min','max','factor','sample']],[GA,['bg','onBg','knob']]],
+  arc:[['Home Assistant',['entity','attribute','min','max','sample']],[tr('Valeur au centre','Center value'),['showValue','decimals','suffix','size','color']],[GA,['thick','bg','onBg']]],
+  bar:[['Home Assistant',['entity','attribute','min','max','sample']],[GA,['bg','onBg','radius']]],
+  camera:[['Home Assistant',['entity','interval']],[tr('Affichage','Display'),['fit','full','bg']]]
 };
 function addField(box,obj,k,f,onCh){
   if(f.show&&!f.show(obj))return;
@@ -690,10 +747,10 @@ function addField(box,obj,k,f,onCh){
   const opts=f.t==='select'?(typeof f.o==='function'?f.o(obj):f.o):f.t==='service'?serviceOptions(obj):undefined;
   if(opts){
     inp=document.createElement('select');
-    if(f.t==='service'){const op=document.createElement('option');op.value='';op.textContent='Par défaut : '+defaultAction(obj);inp.appendChild(op);}
+    if(f.t==='service'){const op=document.createElement('option');op.value='';op.textContent=tr('Par défaut : ','Default: ')+defaultAction(obj);inp.appendChild(op);}
     for(const [v,t,dis] of opts){const op=document.createElement('option');op.value=v;op.textContent=t;op.disabled=!!dis;inp.appendChild(op);}
     const cur=obj[k]??(f.num?0:'');
-    if(f.t==='service'&&cur&&!opts.some(o=>o[0]===cur)){const op=document.createElement('option');op.value=cur;op.textContent=cur+' (autre domaine)';inp.appendChild(op);}
+    if(f.t==='service'&&cur&&!opts.some(o=>o[0]===cur)){const op=document.createElement('option');op.value=cur;op.textContent=cur+tr(' (autre domaine)',' (other domain)');inp.appendChild(op);}
     inp.value=cur;
   }
   else if(f.t==='select'||f.t==='service'){inp=document.createElement('input');inp.type='text';inp.value=obj[k]??'';const ph=typeof f.ph==='function'?f.ph(obj):f.ph;if(ph)inp.placeholder=ph;}
@@ -735,21 +792,21 @@ function renderInspector(){
   const multi=extra.size>0;
   const head=document.createElement('div');head.className='ihead';
   head.innerHTML=multi
-    ?`<div><h2 style="margin:0 0 2px">Sélection</h2><div class="ty">${selIds().length} éléments</div></div>`
-    :`<div><h2 style="margin:0 0 2px">Élément</h2><div class="ty">${TYPES[w.type][0]}</div></div>`;
+    ?`<div><h2 style="margin:0 0 2px">${tr('Sélection','Selection')}</h2><div class="ty">${selIds().length} ${tr('éléments','elements')}</div></div>`
+    :`<div><h2 style="margin:0 0 2px">${tr('Élément','Element')}</h2><div class="ty">${TYPES[w.type][0]}</div></div>`;
   box.appendChild(head);
   const acts=document.createElement('div');acts.className='iacts';
   // execCommand('copy'/'cut') declenche nos gestionnaires : copie aussi dans le presse-papiers du systeme
   const sysCopy=cut=>{if(!document.execCommand(cut?'cut':'copy'))copySel(cut);};
-  const list=[['Copier',()=>sysCopy(false)],['Couper',()=>sysCopy(true)],['Coller',pasteFromMemory],['Dupliquer',dup],['Pivoter 90°',()=>rotateSel(90)]];
-  if(!multi)list.push(['Avancer',()=>layer(1)],['Reculer',()=>layer(-1)]);
-  list.push(['Supprimer',delSel,'danger']);
+  const list=[[tr('Copier','Copy'),()=>sysCopy(false)],[tr('Couper','Cut'),()=>sysCopy(true)],[tr('Coller','Paste'),pasteFromMemory],[tr('Dupliquer','Duplicate'),dup],[tr('Pivoter 90°','Rotate 90°'),()=>rotateSel(90)]];
+  if(!multi)list.push([tr('Avancer','Bring forward'),()=>layer(1)],[tr('Reculer','Send backward'),()=>layer(-1)]);
+  list.push([tr('Supprimer','Delete'),delSel,'danger']);
   for(const [label,fn,cls] of list){
     const b=document.createElement('button');b.className='btn'+(cls?' '+cls:'');b.textContent=label;b.onclick=fn;acts.appendChild(b);}
   box.appendChild(acts);
   if(multi){
     const n=document.createElement('p');n.className='note';
-    n.innerHTML='Glissez pour déplacer tous les éléments sélectionnés, ou utilisez les flèches. <kbd>Maj</kbd>/<kbd>Ctrl</kbd>+clic ajoute ou retire un élément de la sélection.';
+    n.innerHTML=tr('Glissez pour déplacer tous les éléments sélectionnés, ou utilisez les flèches. <kbd>Maj</kbd>/<kbd>Ctrl</kbd>+clic ajoute ou retire un élément de la sélection.','Drag to move all selected elements, or use the arrow keys. <kbd>Shift</kbd>/<kbd>Ctrl</kbd>+click adds or removes an element from the selection.');
     box.appendChild(n);return;
   }
   const onCh=(structural,k)=>{
@@ -779,10 +836,10 @@ function renderInspector(){
   };
   // Les champs dependant de l'entite (action, min/max) se mettent a jour quand on quitte le champ
   setTimeout(()=>{const e=$('#f_entity');if(e)e.addEventListener('change',()=>{renderInspector();autoConfigure(w);});},0);
-  const g0=group(box,'Position et taille');
+  const g0=group(box,tr('Position et taille','Position and size'));
   idField(g0,w,(o,n)=>{sel=n;renderScreen();commit();});
   const geo=document.createElement('div');geo.className='geo';g0.appendChild(geo);
-  for(const [k,l] of [['x','X'],['y','Y'],['w','L'],['h','H']]){if(k==='h'&&isText(w))continue;addField(geo,w,k,{l,t:'num'},onCh);}
+  for(const [k,l] of [['x','X'],['y','Y'],['w',tr('L','W')],['h','H']]){if(k==='h'&&isText(w))continue;addField(geo,w,k,{l,t:'num'},onCh);}
   addField(g0,w,'rot',F.rot,onCh);
   for(const [title,keys] of G[w.type]){const g=group(box,title);for(const k of keys)addField(g,w,k,F[k],onCh);}
 }
@@ -790,16 +847,16 @@ function inspectPage(box){
   const p=page();
   const g=group(box,'Page');
   idField(g,p,(o,n)=>{allW().forEach(x=>{if(x.target===o)x.target=n;});renderTabs();renderScreen();commit();});
-  addField(g,p,'bg',{l:'Fond',t:'color'},()=>{renderScreen();commit();});
-  if(S.pages.length>1){const b=document.createElement('button');b.className='btn danger';b.textContent='Supprimer cette page';
+  addField(g,p,'bg',{l:tr('Fond','Background'),t:'color'},()=>{renderScreen();commit();});
+  if(S.pages.length>1){const b=document.createElement('button');b.className='btn danger';b.textContent=tr('Supprimer cette page','Delete this page');
     b.onclick=()=>{S.pages.splice(S.cur,1);S.cur=Math.max(0,S.cur-1);renderAll();commit();};g.appendChild(b);}
-  const s=group(box,'Écran');
-  const n0=document.createElement('p');n0.className='note';n0.textContent=`Résolution : ${S.res.w} × ${S.res.h} px. La première page s'affiche au démarrage.`;s.appendChild(n0);
-  const n=document.createElement('p');n.className='note';n.textContent='Cliquez sur un élément pour le modifier, ou ajoutez-en un depuis la liste de gauche.';box.appendChild(n);
+  const s=group(box,tr('Écran','Screen'));
+  const n0=document.createElement('p');n0.className='note';n0.textContent=EN?`Resolution: ${S.res.w} × ${S.res.h} px. The first page is shown at startup.`:`Résolution : ${S.res.w} × ${S.res.h} px. La première page s'affiche au démarrage.`;s.appendChild(n0);
+  const n=document.createElement('p');n.className='note';n.textContent=tr('Cliquez sur un élément pour le modifier, ou ajoutez-en un depuis la liste de gauche.','Click an element to edit it, or add one from the list on the left.');box.appendChild(n);
   const c=readClip();
   if(c&&c.items&&c.items.length){
     const b=document.createElement('button');b.className='btn';b.style.marginTop='10px';
-    b.textContent=`Coller ${c.items.length} élément${c.items.length>1?'s':''} dans cette page`;b.onclick=pasteFromMemory;box.appendChild(b);
+    b.textContent=EN?`Paste ${c.items.length} element${plural(c.items.length)} into this page`:`Coller ${c.items.length} élément${plural(c.items.length)} dans cette page`;b.onclick=pasteFromMemory;box.appendChild(b);
   }
 }
 
@@ -815,31 +872,32 @@ function checks(){
   const out=[];const W=(m,cls)=>out.push({m,cls:cls||''});
   const pageIds=new Set(S.pages.map(p=>p.id));
   const count=new Map();for(const id of [...S.pages.map(p=>p.id),...allW().map(w=>w.id)])count.set(id,(count.get(id)||0)+1);
-  for(const [id,n] of count)if(n>1)W(`L'id <code>${esc(id)}</code> est utilisé ${n} fois. Chaque élément et chaque page doit avoir son propre id.`);
+  for(const [id,n] of count)if(n>1)W(EN?`The id <code>${esc(id)}</code> is used ${n} times. Each element and each page needs its own id.`:`L'id <code>${esc(id)}</code> est utilisé ${n} fois. Chaque élément et chaque page doit avoir son propre id.`);
   const needsEnt=['value','toggle','switch','slider','arc','bar','camera'];
   for(const w of allW()){
-    const b=vbox(w);
-    if(b.x<-0.5||b.y<-0.5||b.x+b.w>S.res.w+0.5||b.y+b.h>S.res.h+0.5)W(`<code>${esc(w.id)}</code> dépasse du bord de l'écran${+w.rot?' (en tenant compte de la rotation)':''}.`);
-    if(w.entity&&!/^[a-z_]+\.[a-z0-9_]+$/.test(w.entity))W(`<code>${esc(w.id)}</code> : entrez un id d'entité complet, comme <code>light.cuisine</code>.`);
-    else if(needsEnt.includes(w.type)&&!w.entity)W(`<code>${esc(w.id)}</code> : aucune entité, l'élément restera inactif.`);
-    if(w.type==='camera'&&w.entity&&dom(w.entity)!=='camera')W(`<code>${esc(w.id)}</code> : choisissez une entité <code>camera.…</code>.`);
+    const b=vbox(w),id=`<code>${esc(w.id)}</code>`;
+    if(b.x<-0.5||b.y<-0.5||b.x+b.w>S.res.w+0.5||b.y+b.h>S.res.h+0.5)W(EN?`${id} goes past the edge of the screen${+w.rot?' (taking the rotation into account)':''}.`:`${id} dépasse du bord de l'écran${+w.rot?' (en tenant compte de la rotation)':''}.`);
+    if(w.entity&&!/^[a-z_]+\.[a-z0-9_]+$/.test(w.entity))W(EN?`${id}: enter a full entity id, such as <code>light.kitchen</code>.`:`${id} : entrez un id d'entité complet, comme <code>light.cuisine</code>.`);
+    else if(needsEnt.includes(w.type)&&!w.entity)W(EN?`${id}: no entity, the element will stay inactive.`:`${id} : aucune entité, l'élément restera inactif.`);
+    if(w.type==='camera'&&w.entity&&dom(w.entity)!=='camera')W(EN?`${id}: choose a <code>camera.…</code> entity.`:`${id} : choisissez une entité <code>camera.…</code>.`);
     if(w.type==='action'){
-      if(w.mode==='page'&&!pageIds.has(w.target))W(`<code>${esc(w.id)}</code> : choisissez la page à ouvrir.`);
-      if(w.mode==='ha'&&!w.entity&&!w.action)W(`<code>${esc(w.id)}</code> : indiquez une entité ou une action.`);
+      if(w.mode==='page'&&!pageIds.has(w.target))W(EN?`${id}: choose the page to open.`:`${id} : choisissez la page à ouvrir.`);
+      if(w.mode==='ha'&&!w.entity&&!w.action)W(EN?`${id}: set an entity or an action.`:`${id} : indiquez une entité ou une action.`);
     }
     if(isLocal(w.entity)){
-      if(!LOCAL_ENT.some(e=>e[0]===w.entity))W(`<code>${esc(w.id)}</code> : entité d'écran inconnue. Choisissez-en une dans la liste (<code>screen.…</code>).`);
-      else if(READONLY_LOCAL.includes(w.entity)&&['toggle','switch','slider','action'].includes(w.type))W(`<code>${esc(w.id)}</code> : <code>${esc(w.entity)}</code> est en lecture seule. Utilisez une valeur, une jauge ou une barre.`);
-      else if(READONLY_LOCAL.includes(w.entity)&&!BATT_ON)W(`<code>${esc(w.id)}</code> : la mesure de la batterie est désactivée, l'élément affichera « -- ». Voir le bouton Batterie.`,'info');
-      else if(w.entity==='screen.brightness'&&w.max!=null&&(+w.max>100||+w.min<0))W(`<code>${esc(w.id)}</code> : la luminosité de l'écran va de 0 à 100. Réglez Min/Max en conséquence.`);
+      const e=`<code>${esc(w.entity)}</code>`;
+      if(!LOCAL_ENT.some(x=>x[0]===w.entity))W(EN?`${id}: unknown screen entity. Pick one from the list (<code>screen.…</code>).`:`${id} : entité d'écran inconnue. Choisissez-en une dans la liste (<code>screen.…</code>).`);
+      else if(READONLY_LOCAL.includes(w.entity)&&['toggle','switch','slider','action'].includes(w.type))W(EN?`${id}: ${e} is read only. Use a value, a gauge or a bar.`:`${id} : ${e} est en lecture seule. Utilisez une valeur, une jauge ou une barre.`);
+      else if(READONLY_LOCAL.includes(w.entity)&&!BATT_ON)W(EN?`${id}: battery measurement is disabled, the element will show “--”. See the Battery button.`:`${id} : la mesure de la batterie est désactivée, l'élément affichera « -- ». Voir le bouton Batterie.`,'info');
+      else if(w.entity==='screen.brightness'&&w.max!=null&&(+w.max>100||+w.min<0))W(EN?`${id}: screen brightness goes from 0 to 100. Set Min/Max accordingly.`:`${id} : la luminosité de l'écran va de 0 à 100. Réglez Min/Max en conséquence.`);
     }
     for(const t of [w.text,w.prefix,w.suffix]){
       if(t==null||t==='')continue;const d=devText(t);
       const q=x=>x.split('?').length;
-      if(q(d)>q(String(t)))W(`<code>${esc(w.id)}</code> : certains caractères de « ${esc(t)} » n'existent pas dans la police de l'écran et s'afficheront « ? » (« ${esc(d)} »). Les accents, œ, « », €, … sont disponibles.`);
+      if(q(d)>q(String(t)))W(EN?`${id}: some characters of “${esc(t)}” are not in the screen font and will be shown as “?” (“${esc(d)}”). Accents, œ, « », €, … are available.`:`${id} : certains caractères de « ${esc(t)} » n'existent pas dans la police de l'écran et s'afficheront « ? » (« ${esc(d)} »). Les accents, œ, « », €, … sont disponibles.`);
     }
   }
-  if(!out.length)W('Aucun problème détecté.','none');
+  if(!out.length)W(tr('Aucun problème détecté.','No problem found.'),'none');
   return out;
 }
 function renderChecks(){$('#warns').innerHTML=checks().map(c=>`<li class="${c.cls}">${c.m}</li>`).join('');}
@@ -847,23 +905,23 @@ function renderChecks(){$('#warns').innerHTML=checks().map(c=>`<li class="${c.cl
 /* ---------- enregistrement sur l'ecran ---------- */
 function renderSaveState(){
   const el=$('#saveState');
-  if(!ONLINE){el.className='savestate err';el.textContent='Hors ligne : ouvrez cette page depuis l\'écran pour enregistrer';$('#saveBtn').disabled=true;return;}
+  if(!ONLINE){el.className='savestate err';el.textContent=tr('Hors ligne : ouvrez cette page depuis l\'écran pour enregistrer','Offline: open this page from the panel to save');$('#saveBtn').disabled=true;return;}
   $('#saveBtn').disabled=false;
-  if(savedKey===layoutKey(S)){el.className='savestate ok';el.textContent='✓ Enregistré sur l\'écran';}
-  else{el.className='savestate dirty';el.textContent='● Modifications non enregistrées';}
+  if(savedKey===layoutKey(S)){el.className='savestate ok';el.textContent=tr('✓ Enregistré sur l\'écran','✓ Saved to screen');}
+  else{el.className='savestate dirty';el.textContent=tr('● Modifications non enregistrées','● Unsaved changes');}
 }
 async function api(path,opt){
   const r=await fetch(path,opt);let j=null;try{j=await r.json();}catch(e){}
   // Session expiree (l'ecran a redemarre : nouveau mot de passe) -> page de connexion.
   // Le brouillon est conserve dans le navigateur.
-  if(r.status===401){goLogin();throw new Error('Session expirée');}
+  if(r.status===401){goLogin();throw new Error(tr('Session expirée','Session expired'));}
   if(!r.ok)throw new Error((j&&j.message)||('HTTP '+r.status));return j;
 }
 const post=(path,body)=>api(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 $('#saveBtn').onclick=async()=>{
-  const b=$('#saveBtn'),el=$('#saveState');b.disabled=true;el.className='savestate';el.textContent='Envoi…';
+  const b=$('#saveBtn'),el=$('#saveState');b.disabled=true;el.className='savestate';el.textContent=tr('Envoi…','Sending…');
   try{const body={...S,cur:0};await post('/api/layout',body);savedKey=layoutKey(S);try{localStorage.removeItem(DRAFT_KEY);}catch(e){}renderSaveState();}
-  catch(e){el.className='savestate err';el.textContent='Échec : '+e.message;}
+  catch(e){el.className='savestate err';el.textContent=tr('Échec : ','Failed: ')+e.message;}
   finally{b.disabled=false;}
 };
 
@@ -909,7 +967,7 @@ function serviceOptions(w){
   const add=(name,info)=>{
     if(slider&&!Object.keys(info.f||{}).length)return;
     const needs=!slider&&info.r;
-    opts.push([name,`${name} — ${info.n}${needs?' (paramètres requis)':''}`,needs]);
+    opts.push([name,`${name} — ${info.n}${needs?tr(' (paramètres requis)',' (parameters required)'):''}`,needs]);
   };
   for(const s of Object.keys(SVC[d]).sort())add(`${d}.${s}`,SVC[d][s]);
   if(!slider&&SVC.homeassistant)for(const s of ['toggle','turn_on','turn_off'])if(SVC.homeassistant[s])add(`homeassistant.${s}`,SVC.homeassistant[s]);
@@ -919,15 +977,15 @@ function serviceOptions(w){
 function fieldOptions(w){
   const info=svcOf(w.action||defaultAction(w));
   if(!info)return null;
-  const list=Object.entries(info.f||{}).map(([k,b])=>[k,k+(b[0]!=null&&b[1]!=null?` (${b[0]} à ${b[1]})`:'')]);
+  const list=Object.entries(info.f||{}).map(([k,b])=>[k,k+(b[0]!=null&&b[1]!=null?` (${b[0]} ${tr('à','to')} ${b[1]})`:'')]);
   if(w.field&&!list.some(o=>o[0]===w.field))list.push([w.field,w.field]);
-  if(!w.field)list.unshift(['','(défaut)']);
+  if(!w.field)list.unshift(['',tr('(défaut)','(default)')]);
   return list;
 }
 async function entityAttrs(id){try{return (await api('/api/ha/state?id='+encodeURIComponent(id))).attributes||{};}catch(e){return null;}}
 function setRange(w,min,max,why){
   if(!isFinite(min)||!isFinite(max)||!(max>min))return false;
-  w.min=min;w.max=max;autoNote[w.id]=`${min} à ${max} (${why})`;
+  w.min=min;w.max=max;autoNote[w.id]=`${min} ${tr('à','to')} ${max} (${why})`;
   const s=parseFloat(w.sample);if(isNaN(s)||s<min||s>max)w.sample=String(Math.round(min+(max-min)*0.6));
   return true;
 }
@@ -938,15 +996,15 @@ function setRange(w,min,max,why){
 function applyFieldBounds(w,attrs){
   const d=dom(w.entity),p=SLIDER_PRESET[d],fac=+w.factor||1;
   if(attrs&&p&&p.field===w.field&&p.minA&&attrs[p.minA]!=null&&attrs[p.maxA]!=null&&
-     setRange(w,Math.floor(+attrs[p.minA]/fac),Math.ceil(+attrs[p.maxA]/fac),`attributs ${p.minA}/${p.maxA} de l'entité`))return;
+     setRange(w,Math.floor(+attrs[p.minA]/fac),Math.ceil(+attrs[p.maxA]/fac),(EN?`entity attributes ${p.minA}/${p.maxA}`:`attributs ${p.minA}/${p.maxA} de l'entité`)))return;
   const info=svcOf(w.action||defaultAction(w)),b=info&&info.f&&info.f[w.field];
   if(b&&b[0]!=null&&b[1]!=null){
     let [mn,mx]=b;
     if(mx<=1){w.factor=0.01;mn=Math.round(mn*100);mx=Math.round(mx*100);}   // Ex. volume 0 a 1
     else if(!(p&&p.field===w.field&&p.factor))w.factor=1;
-    if(setRange(w,mn,mx,`bornes de ${w.field} dans ${w.action||defaultAction(w)}`))return;
+    if(setRange(w,mn,mx,(EN?`bounds of ${w.field} in ${w.action||defaultAction(w)}`:`bornes de ${w.field} dans ${w.action||defaultAction(w)}`)))return;
   }
-  if(p&&p.field===w.field){w.factor=p.factor||1;setRange(w,p.min,p.max,'valeurs usuelles '+d);}
+  if(p&&p.field===w.field){w.factor=p.factor||1;setRange(w,p.min,p.max,tr('valeurs usuelles ','usual values ')+d);}
 }
 // Nouvelle entite : choisit action, parametre et plage (curseur), ou la plage (jauge, barre)
 async function autoConfigure(w){
@@ -959,8 +1017,8 @@ async function autoConfigure(w){
       if(opts&&opts.length){w.action=opts[0][0];w.field=Object.keys(svcOf(w.action).f)[0]||'';w.attribute='';w.factor=1;}}
     applyFieldBounds(w,attrs);
   }else if(attrs){
-    if(attrs.min!=null&&attrs.max!=null)setRange(w,+attrs.min,+attrs.max,'attributs min/max de l\'entité');
-    else if(attrs.unit_of_measurement==='%')setRange(w,0,100,'unité %');
+    if(attrs.min!=null&&attrs.max!=null)setRange(w,+attrs.min,+attrs.max,tr('attributs min/max de l\'entité','entity min/max attributes'));
+    else if(attrs.unit_of_measurement==='%')setRange(w,0,100,tr('unité %','unit %'));
   }
   renderScreen();renderInspector();commit();
 }
@@ -984,7 +1042,7 @@ async function onFieldChanged(w){
 let BATT_ON=false,battTimer=null;
 function showBatt(b){
   BATT_ON=!!b.enabled;
-  $('#battNow').textContent=!b.enabled?'Mesure désactivée.':(b.valid?`Mesure actuelle : ${b.voltage.toFixed(2)} V, environ ${b.percent} %`:'Mesure active, mais tension invalide : vérifiez le câblage et le rapport.');
+  $('#battNow').textContent=!b.enabled?tr('Mesure désactivée.','Measurement disabled.'):(b.valid?(EN?`Current reading: ${b.voltage.toFixed(2)} V, about ${b.percent} %`:`Mesure actuelle : ${b.voltage.toFixed(2)} V, environ ${b.percent} %`):tr('Mesure active, mais tension invalide : vérifiez le câblage et le rapport.','Measurement on, but the voltage is invalid: check the wiring and the ratio.'));
 }
 async function loadBatt(fill){try{const b=await api('/api/battery');showBatt(b);if(fill){$('#battEn').checked=b.enabled;$('#battRatio').value=b.ratio;}return b;}catch(e){}}
 $('#battBtn').onclick=()=>{$('#battMsg').textContent='';$('#battModal').hidden=false;loadBatt(true);clearInterval(battTimer);battTimer=setInterval(()=>loadBatt(false),2000);};
@@ -992,13 +1050,13 @@ const closeBatt=()=>{$('#battModal').hidden=true;clearInterval(battTimer);render
 $('#battClose').onclick=closeBatt;
 $('#battModal').addEventListener('click',e=>{if(e.target===$('#battModal'))closeBatt();});
 $('#battSave').onclick=async()=>{const m=$('#battMsg');
-  try{const b=await post('/api/battery',{enabled:$('#battEn').checked,ratio:parseFloat($('#battRatio').value)||2});showBatt(b);m.className='msg ok';m.textContent='Enregistré.';renderChecks();}
+  try{const b=await post('/api/battery',{enabled:$('#battEn').checked,ratio:parseFloat($('#battRatio').value)||2});showBatt(b);m.className='msg ok';m.textContent=tr('Enregistré.','Saved.');renderChecks();}
   catch(e){m.className='msg err';m.textContent=e.message;}};
 
 /* ---------- luminosite de l'ecran ---------- */
 const bRange=$('#brightRange'),bVal=$('#brightVal');
 let bTimer=null,bDragging=false;
-function showBright(v){bVal.textContent=v===0?'éteint':v+' %';}
+function showBright(v){bVal.textContent=v===0?tr('éteint','off'):v+' %';}
 async function loadBright(){
   if(!ONLINE||bDragging)return;
   try{const b=await api('/api/brightness');bRange.value=b.value;showBright(b.value);}catch(e){}
@@ -1013,26 +1071,26 @@ async function refreshHa(){
   if(!ONLINE)return;
   try{const h=await api('/api/ha');setDot($('#haDot'),h.status);setDot($('#haDot2'),h.status);$('#haStatus').textContent=h.message;
     if(document.activeElement!==$('#haUrl')&&!$('#haUrl').value)$('#haUrl').value=h.url||'';
-    $('#haTok').placeholder=h.has_token?'Jeton enregistré (laisser vide pour le conserver)':'Collez le jeton ici';
-    $('#haTokHint').textContent=h.has_token?'Un jeton est déjà enregistré sur l\'écran. Il n\'est jamais renvoyé au navigateur.':'';
-    return h;}catch(e){$('#haStatus').textContent='Erreur : '+e.message;}
+    $('#haTok').placeholder=h.has_token?tr('Jeton enregistré (laisser vide pour le conserver)','Token saved (leave empty to keep it)'):tr('Collez le jeton ici','Paste the token here');
+    $('#haTokHint').textContent=h.has_token?tr('Un jeton est déjà enregistré sur l\'écran. Il n\'est jamais renvoyé au navigateur.','A token is already saved on the panel. It is never sent back to the browser.'):'';
+    return h;}catch(e){$('#haStatus').textContent=tr('Erreur : ','Error: ')+e.message;}
 }
 async function loadEntities(showMsg){
-  const m=$('#haMsg');if(showMsg){m.className='msg';m.textContent='Chargement des entités…';}
+  const m=$('#haMsg');if(showMsg){m.className='msg';m.textContent=tr('Chargement des entités…','Loading entities…');}
   try{const list=await api('/api/ha/entities');fillEntList(list);await loadServices();
-    if(showMsg){m.className='msg ok';m.textContent=list.length+' entités disponibles dans les champs « Entité ».';}
+    if(showMsg){m.className='msg ok';m.textContent=list.length+tr(' entités disponibles dans les champs « Entité ».',' entities available in the “Entity” fields.');}
     renderInspector();
-  }catch(e){if(showMsg){m.className='msg err';m.textContent='Entités : '+e.message;}}
+  }catch(e){if(showMsg){m.className='msg err';m.textContent=tr('Entités : ','Entities: ')+e.message;}}
 }
 $('#haBtn').onclick=()=>{$('#haMsg').textContent='';$('#haModal').hidden=false;refreshHa();$('#haUrl').focus();};
 $('#logoutBtn').onclick=async()=>{try{await post('/api/logout',{});}catch(e){}goLogin();};
 $('#haClose').onclick=()=>{$('#haModal').hidden=true;};
 $('#haModal').addEventListener('click',e=>{if(e.target===$('#haModal'))$('#haModal').hidden=true;});
-$('#haTest').onclick=async()=>{const m=$('#haMsg');m.className='msg';m.textContent='Test en cours…';
+$('#haTest').onclick=async()=>{const m=$('#haMsg');m.className='msg';m.textContent=tr('Test en cours…','Testing…');
   try{const r=await post('/api/ha/test',{url:$('#haUrl').value,token:$('#haTok').value});m.className='msg '+(r.ok?'ok':'err');m.textContent=r.message;}
   catch(e){m.className='msg err';m.textContent=e.message;}};
-$('#haSave').onclick=async()=>{const m=$('#haMsg');m.className='msg';m.textContent='Enregistrement…';
-  try{await post('/api/ha',{url:$('#haUrl').value,token:$('#haTok').value});$('#haTok').value='';m.className='msg ok';m.textContent='Enregistré.';
+$('#haSave').onclick=async()=>{const m=$('#haMsg');m.className='msg';m.textContent=tr('Enregistrement…','Saving…');
+  try{await post('/api/ha',{url:$('#haUrl').value,token:$('#haTok').value});$('#haTok').value='';m.className='msg ok';m.textContent=tr('Enregistré.','Saved.');
     setTimeout(refreshHa,1500);loadEntities(false);}
   catch(e){m.className='msg err';m.textContent=e.message;}};
 $('#haEnt').onclick=()=>loadEntities(true);
@@ -1047,13 +1105,13 @@ const modal=$('#modal'),ptxt=$('#projTxt'),pmsg=$('#projMsg');
 $('#projBtn').onclick=()=>{ptxt.value=JSON.stringify(S,null,1);pmsg.textContent='';modal.hidden=false;ptxt.focus();ptxt.select();};
 $('#projClose').onclick=()=>{modal.hidden=true;};
 modal.addEventListener('click',e=>{if(e.target===modal)modal.hidden=true;});
-$('#projCopy').onclick=()=>{navigator.clipboard.writeText(ptxt.value).then(()=>pmsg.textContent='Copié.',()=>{ptxt.focus();ptxt.select();pmsg.textContent='Texte sélectionné. Appuyez sur Ctrl+C.';});};
+$('#projCopy').onclick=()=>{navigator.clipboard.writeText(ptxt.value).then(()=>pmsg.textContent=tr('Copié.','Copied.'),()=>{ptxt.focus();ptxt.select();pmsg.textContent=tr('Texte sélectionné. Appuyez sur Ctrl+C.','Text selected. Press Ctrl+C.');});};
 function replace(o,msg){S=normalize(o);clearSel();renderAll();commit();ptxt.value=JSON.stringify(S,null,1);pmsg.textContent=msg;}
-$('#projLoad').onclick=()=>{try{const o=JSON.parse(ptxt.value);if(!o||!Array.isArray(o.pages)||!o.pages.length)throw 0;replace(o,'Chargé. Pensez à l\'enregistrer sur l\'écran.');}catch(e){pmsg.textContent='Ce texte n\'est pas un projet de ce designer. Collez-le en entier, en commençant par {.';}};
-$('#projExample').onclick=()=>replace(sample(),'Exemple chargé. « Annuler » restaure votre projet.');
-$('#projBlank').onclick=()=>replace(blank(),'Projet vide prêt. « Annuler » restaure votre projet.');
+$('#projLoad').onclick=()=>{try{const o=JSON.parse(ptxt.value);if(!o||!Array.isArray(o.pages)||!o.pages.length)throw 0;replace(o,tr('Chargé. Pensez à l\'enregistrer sur l\'écran.','Loaded. Remember to save it to the screen.'));}catch(e){pmsg.textContent=tr('Ce texte n\'est pas un projet de ce designer. Collez-le en entier, en commençant par {.','This text is not a project from this designer. Paste all of it, starting with {.');}};
+$('#projExample').onclick=()=>replace(sample(),tr('Exemple chargé. « Annuler » restaure votre projet.','Example loaded. “Undo” restores your project.'));
+$('#projBlank').onclick=()=>replace(blank(),tr('Projet vide prêt. « Annuler » restaure votre projet.','Blank project ready. “Undo” restores your project.'));
 function download(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);}
-$('#projSave').onclick=()=>{download('panneau-ha.json',JSON.stringify(S,null,1),'application/json');pmsg.textContent='panneau-ha.json enregistré dans vos téléchargements.';};
+$('#projSave').onclick=()=>{download('panneau-ha.json',JSON.stringify(S,null,1),'application/json');pmsg.textContent=tr('panneau-ha.json enregistré dans vos téléchargements.','panneau-ha.json saved to your downloads.');};
 $('#projOpen').onclick=()=>$('#projFile').click();
 $('#projFile').onchange=e=>{const f=e.target.files[0];if(!f)return;f.text().then(t=>{ptxt.value=t;$('#projLoad').click();e.target.value='';});};
 

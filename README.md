@@ -5,7 +5,7 @@ Firmware Arduino (sans ESPHome) pour un écran tactile 800×480 relié à Home A
 ## Fonctionnement
 1. **Démarrage** : aplats de couleurs, mire, arc-en-ciel animé (en double tampon), puis écran d'accueil avec la résolution, le taux de rafraîchissement mesuré et un test du tactile.
 2. **Wi-Fi** : réseau mémorisé, sinon scan → clavier tactile → connexion.
-3. **Écran « Connecté »** : affiche l'IP et l'adresse de configuration (`http://<ip>/` ou `http://ha-panel-7.local/`).
+3. **Écran « Connecté »** : affiche l'IP et l'adresse de configuration (`http://<ip>/` ou `http://ha-panel-7.local/`). Le sélecteur **FR / EN** de l'en-tête choisit la langue de l'écran admin, des messages système et de la page web. Les textes de vos tableaux de bord ne sont jamais traduits.
 4. **Tableau de bord** : s'ouvre automatiquement si un layout existe, après 1, 5, 10 ou 15 s (réglage « Démarrage » de l'écran « Connecté », 5 s par défaut). Un **appui long de 3 s sur le fond** d'une page revient à l'écran « Connecté ».
 
 ## Page de configuration (navigateur)
@@ -100,6 +100,7 @@ Téléversez par le port **USB** natif de la carte. Sur cette carte, le port UAR
 | `lcd_panel.*` | Panneau RGB, 2 framebuffers PSRAM, mesure du rafraîchissement |
 | `boot_anim.*` | Mires de démarrage |
 | `lvgl_port.*` | LVGL en mode direct sur les framebuffers |
+| `i18n.*` | Langue de l'interface (FR / EN), macro `TR(fr, en)` |
 | `app_ui.*` | Accueil, Wi-Fi, écran « Connecté », machine d'états |
 | `ha_client.*` | Client API REST Home Assistant (tâche de fond) |
 | `camera.*` | Images des caméras HA : téléchargement, décodage JPEG, double tampon PSRAM |

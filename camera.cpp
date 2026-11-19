@@ -1,3 +1,4 @@
+#include "i18n.h"
 #include "camera.h"
 #include "ha_client.h"
 #include <WiFi.h>
@@ -75,16 +76,16 @@ static void free_slot(Slot &s) {
 
 static String error_text(int code) {
   switch (code) {
-    case 401: return "Caméra : jeton refusé";
-    case 404: return "Caméra introuvable";
-    case ERR_NOT_CONFIGURED: return "Home Assistant non configuré";
-    case ERR_TOO_BIG: return "Image trop grande";
-    case ERR_DECODE: return "Image illisible";
-    case ERR_MEMORY: return "Mémoire insuffisante";
+    case 401: return TR("Caméra : jeton refusé", "Camera: token rejected");
+    case 404: return TR("Caméra introuvable", "Camera not found");
+    case ERR_NOT_CONFIGURED: return TR("Home Assistant non configuré", "Home Assistant not configured");
+    case ERR_TOO_BIG: return TR("Image trop grande", "Image too large");
+    case ERR_DECODE: return TR("Image illisible", "Unreadable image");
+    case ERR_MEMORY: return TR("Mémoire insuffisante", "Not enough memory");
   }
-  if (code >= 500) return "Caméra indisponible";
-  if (unreachable(code)) return "Home Assistant injoignable\nNouvel essai dans 10 s";
-  return "Caméra : erreur HTTP " + String(code);
+  if (code >= 500) return TR("Caméra indisponible", "Camera unavailable");
+  if (unreachable(code)) return TR("Home Assistant injoignable\nNouvel essai dans 10 s", "Home Assistant unreachable\nRetrying in 10 s");
+  return TR("Caméra : erreur HTTP ", "Camera: HTTP error ") + String(code);
 }
 
 // ---------------------------------------------------------------------------

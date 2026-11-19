@@ -21,6 +21,7 @@
 #include "ha_client.h"
 #include "camera.h"
 #include "web_config.h"
+#include "i18n.h"
 
 SET_LOOP_TASK_STACK_SIZE(16 * 1024);
 
@@ -54,6 +55,7 @@ void setup() {
                 (unsigned long)(ESP.getFreePsram() >> 10), (unsigned long)(ESP.getFreeHeap() >> 10));
   if (!psramFound()) halt("PSRAM absente - choisir 'PSRAM: OPI PSRAM' dans le menu Outils");
 
+  lang_begin();   // Langue de l'interface (FR/EN)
   Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL, I2C_FREQ_HZ);
 
   // CH422G : retroeclairage eteint pendant l'init, LCD hors reset.

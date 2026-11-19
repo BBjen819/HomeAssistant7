@@ -1,6 +1,6 @@
 # Journal de progression — HomeAssistant7
 
-Dernière mise à jour : 2026-11-17
+Dernière mise à jour : 2026-11-18
 
 ## Ce qui fonctionne (testé sur la carte)
 - **Écran RGB 800×480** à **12 MHz**, soit environ 29 Hz, stable et sans scintillement.
@@ -29,6 +29,7 @@ Elles ont été testées dans le navigateur ou seulement compilées.
 - **Polices avec accents** (2026-11-18) : Montserrat Latin-1 (é, à, ç, œ, « », €, …) en 12 à 48 px, générées par `tools/gen_fonts.ps1` dans `src/fonts/`. Elles remplacent les polices intégrées de LVGL. Les caractères absents (emoji…) s'affichent « ? », comme dans l'aperçu du designer. Les textes de l'écran de configuration sont maintenant accentués.
 - **Durée de l'écran admin au démarrage** (2026-11-18) : choix 1, 5, 10 ou 15 s sur l'écran « Connecté » (NVS `ui/admin_s`, 5 s par défaut). Toucher ce réglage ou la luminosité annule l'ouverture automatique du tableau de bord.
 - **Son de clic** : non ajouté, car la carte ESP32-S3-Touch-LCD-7 n'a ni haut-parleur ni buzzer. Il faudrait câbler un buzzer passif sur une broche libre.
+- **Langue FR / EN** (2026-11-18) : sélecteur FR/EN dans l'en-tête de l'écran « Connecté » (NVS `ui/lang`). Traduit l'écran admin, les messages système (Wi-Fi, Home Assistant, caméras, erreurs web) et la page web (designer + connexion, via `/lang.js`). Les textes des tableaux de bord de l'utilisateur ne sont pas traduits. Designer testé en FR et EN dans Edge headless ; écran non vérifié sur la carte.
 - **Mesure de batterie optionnelle** sur GPIO6 : entités `screen.battery` et `screen.battery_voltage`.
   - Demande un pont diviseur à câbler, et est désactivée par défaut.
 

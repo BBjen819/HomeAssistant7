@@ -1,3 +1,4 @@
+#include "i18n.h"
 #include "web_config.h"
 #include "board_config.h"
 #include "ha_client.h"
@@ -88,13 +89,20 @@ static void send_error(int code, const String &msg) {
 
 static bool parse_body(JsonDocument &doc) {
   if (deserializeJson(doc, s_server.arg("plain"))) {
-    send_error(400, "JSON invalide");
+    send_error(400, TR("JSON invalide", "Invalid JSON"));
     return false;
   }
   return true;
 }
 
 static bool has_session();
+
+// Langue choisie sur l'ecran admin, lue par les pages web avant leur script
+// (route publique : la page de connexion en a besoin).
+static void handle_lang_js() {
+  s_server.sendHeader("Cache-Control", "no-store");
+  s_server.send(200, "application/javascript", lang_en() ? "window.LANG='en';" : "window.LANG='fr';");
+}
 
 static void handle_index() {
   s_server.sendHeader("Cache-Control", "no-store");
@@ -127,10 +135,10 @@ static void handle_layout_get() {
 static void handle_layout_post() {
   const String &body = s_server.arg("plain");
   JsonDocument doc;
-  if (deserializeJson(doc, body)) return send_error(400, "JSON invalide");
-  if (!doc["pages"].is<JsonArray>() || doc["pages"].size() == 0) return send_error(400, "Aucune page");
-  if (!s_fs_ok) return send_error(500, "Systeme de fichiers indisponible");
-  if (!layout_write(body)) return send_error(500, "Ecriture impossible");
+  if (deserializeJson(doc, body)) return send_error(400, TR("JSON invalide", "Invalid JSON"));
+  if (!doc["pages"].is<JsonArray>() || doc["pages"].size() == 0) return send_error(400, TR("Aucune page", "No page"));
+  if (!s_fs_ok) return send_error(500, TR("Système de fichiers indisponible", "File system unavailable"));
+  if (!layout_write(body)) return send_error(500, TR("Écriture impossible", "Write failed"));
   s_layout_changed = true;
   Serial.printf("[WEB] Layout enregistre (%u octets)\n", (unsigned)body.length());
   JsonDocument d;
@@ -195,7 +203,7 @@ static void handle_ha_camera() {
     ok = isalnum((unsigned char)c) || c == '_' || c == '.';
   }
   if (!ok) {
-    send_error(400, "Entite camera invalide");
+    send_error(400, TR("Entité caméra invalide", "Invalid camera entity"));
     return;
   }
   int w = constrain(s_server.arg("w").toInt(), 16, LCD_H_RES);
@@ -215,7 +223,7 @@ static void handle_ha_camera() {
 static void handle_ha_state() {
   String out, err;
   if (ha_get_state(s_server.arg("id"), out, err)) s_server.send(200, "application/json", out);
-  else send_error(err == "Entite introuvable" ? 404 : 502, err);
+  else send_error(err == TR("Entité introuvable", "Entity not found") ? 404 : 502, err);
 }
 
 static void handle_brightness_get() {
@@ -312,14 +320,14 @@ static bool has_session() {
 static void on_auth(const char *path, HTTPMethod method, std::function<void()> fn) {
   s_server.on(path, method, [fn] {
     if (has_session()) fn();
-    else send_error(401, "Authentification requise");
+    else send_error(401, TR("Authentification requise", "Authentication required"));
   });
 }
 
 static void handle_login() {
   uint32_t now = millis();
   if ((int32_t)(s_lock_until - now) > 0) {
-    return send_error(429, String("Trop d'essais. Reessayez dans ") + ((s_lock_until - now) / 1000 + 1) + " s.");
+    return send_error(429, String(TR("Trop d'essais. Réessayez dans ", "Too many attempts. Try again in ")) + ((s_lock_until - now) / 1000 + 1) + " s.");
   }
   JsonDocument b;
   if (!parse_body(b)) return;
@@ -338,11 +346,11 @@ static void handle_login() {
     return;
   }
   s_failures++;
-  String msg = "Mot de passe incorrect.";
+  String msg = TR("Mot de passe incorrect.", "Wrong password.");
   if (s_failures >= 5) {
     uint32_t lock_s = min<uint32_t>(600, 30u << min(s_failures - 5, 5));
     s_lock_until = now + lock_s * 1000;
-    msg += String(" Blocage pendant ") + lock_s + " s.";
+    msg += String(TR(" Blocage pendant ", " Locked for ")) + lock_s + " s.";
   }
   Serial.printf("[WEB] Echec de connexion (%d) depuis %s\n", s_failures, s_server.client().remoteIP().toString().c_str());
   send_error(401, msg);
@@ -388,7 +396,8 @@ void web_begin() {
   const char *headers[] = {"Cookie"};
   s_server.collectHeaders(headers, 1);
 
-  s_server.on("/", HTTP_GET, handle_index);   // Page de connexion si pas de session
+  s_server.on("/", HTTP_GET, handle_index);
+  s_server.on("/lang.js", HTTP_GET, handle_lang_js);   // Page de connexion si pas de session
   s_server.on("/api/login", HTTP_POST, handle_login);
   s_server.on("/api/logout", HTTP_POST, handle_logout);
   on_auth("/api/info", HTTP_GET, handle_info);

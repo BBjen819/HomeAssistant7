@@ -1,3 +1,4 @@
+#include "i18n.h"
 #include "ha_client.h"
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
@@ -27,7 +28,7 @@ static std::map<String, std::vector<String>> s_watch;   // entite -> attributs
 static std::vector<std::pair<String, String>> s_calls;   // service, corps JSON
 static std::map<String, Entity> s_ents;
 static HaStatus s_status = HaStatus::NOT_CONFIGURED;
-static String s_status_msg = "Non configure";
+static String s_status_msg = "-";
 
 struct Lock {
   Lock() { xSemaphoreTake(s_mtx, portMAX_DELAY); }
@@ -99,10 +100,10 @@ static int http_req(const String &base, const String &token, const char *method,
 }
 
 static String error_text(int code) {
-  if (code == 401) return "Jeton refuse (401)";
-  if (code == 404) return "API introuvable (404) - verifier l'URL";
-  if (code < 0) return "Injoignable : " + HTTPClient::errorToString(code);
-  return "Erreur HTTP " + String(code);
+  if (code == 401) return TR("Jeton refusé (401)", "Token rejected (401)");
+  if (code == 404) return TR("API introuvable (404) – vérifiez l'URL", "API not found (404) – check the URL");
+  if (code < 0) return TR("Injoignable : ", "Unreachable: ") + HTTPClient::errorToString(code);
+  return TR("Erreur HTTP ", "HTTP error ") + String(code);
 }
 
 static String variant_to_string(JsonVariantConst v) {
@@ -145,7 +146,7 @@ static bool fetch_entity(const String &url, const String &tok, const String &id,
     e.dirty = true;
   }
   s_status = HaStatus::OK;
-  s_status_msg = "Connecte";
+  s_status_msg = TR("Connecté", "Connected");
   return true;
 }
 
@@ -177,12 +178,12 @@ static void ha_task(void *) {
       watch = s_watch;
     }
     if (url.isEmpty() || tok.isEmpty()) {
-      set_status(HaStatus::NOT_CONFIGURED, "Non configure");
+      set_status(HaStatus::NOT_CONFIGURED, TR("Non configuré", "Not configured"));
       ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(2000));
       continue;
     }
     if (WiFi.status() != WL_CONNECTED) {
-      set_status(HaStatus::ERROR, "Wi-Fi deconnecte");
+      set_status(HaStatus::ERROR, TR("Wi-Fi déconnecté", "Wi-Fi disconnected"));
       ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(2000));
       continue;
     }
@@ -192,7 +193,7 @@ static void ha_task(void *) {
       // Rien a surveiller : simple verification de la connexion
       String resp;
       int code = http_req(url, tok, "GET", "/api/", "", &resp, true);
-      if (code == 200) set_status(HaStatus::OK, "Connecte");
+      if (code == 200) set_status(HaStatus::OK, TR("Connecté", "Connected"));
       else set_status(code == 401 ? HaStatus::AUTH_ERROR : HaStatus::ERROR, error_text(code));
       ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(5000));
       continue;
@@ -239,7 +240,7 @@ void ha_set_config(const String &url, const String &token) {
     s_prefs.putString("url", s_url);
     s_prefs.putString("token", s_token);
     s_status = HaStatus::CONNECTING;
-    s_status_msg = "Connexion...";
+    s_status_msg = TR("Connexion…", "Connecting…");
     for (auto &e : s_ents) e.second.dirty = true;
   }
   Serial.printf("[HA] Nouvelle configuration : %s\n", s_url.c_str());
@@ -253,7 +254,7 @@ bool ha_test(const String &url_in, const String &token_in, String &message) {
     tok = s_token;
   }
   if (url.isEmpty() || tok.isEmpty()) {
-    message = "URL et jeton requis";
+    message = TR("URL et jeton requis", "URL and token required");
     return false;
   }
   String resp;
@@ -264,7 +265,7 @@ bool ha_test(const String &url_in, const String &token_in, String &message) {
   }
   JsonDocument doc;
   deserializeJson(doc, resp);
-  message = String("Connecte a \"") + (doc["location_name"] | "Home Assistant") + "\" (version " +
+  message = String(TR("Connecté à \"", "Connected to \"")) + (doc["location_name"] | "Home Assistant") + "\" (version " +
             (doc["version"] | "?") + ")";
   return true;
 }
@@ -280,7 +281,7 @@ static bool stream_get(const String &path, JsonDocument &filter, JsonDocument &d
     tok = s_token;
   }
   if (url.isEmpty() || tok.isEmpty()) {
-    error = "Home Assistant non configure";
+    error = TR("Home Assistant non configuré", "Home Assistant not configured");
     return false;
   }
   WiFiClient plain;
@@ -305,7 +306,7 @@ static bool stream_get(const String &path, JsonDocument &filter, JsonDocument &d
   DeserializationError err = deserializeJson(doc, http.getStream(), DeserializationOption::Filter(filter));
   http.end();
   if (err) {
-    error = String("Reponse illisible : ") + err.c_str();
+    error = String(TR("Réponse illisible : ", "Unreadable response: ")) + err.c_str();
     return false;
   }
   return true;
@@ -374,7 +375,7 @@ bool ha_get_state(const String &id, String &out, String &error) {
   for (size_t i = 0; i < id.length(); i++) {
     char c = id[i];
     if (!(isalnum((unsigned char)c) || c == '_' || c == '.')) {
-      error = "Entite invalide";
+      error = TR("Entité invalide", "Invalid entity");
       return false;
     }
   }
@@ -385,12 +386,12 @@ bool ha_get_state(const String &id, String &out, String &error) {
     tok = s_token;
   }
   if (url.isEmpty() || tok.isEmpty()) {
-    error = "Home Assistant non configure";
+    error = TR("Home Assistant non configuré", "Home Assistant not configured");
     return false;
   }
   int code = http_req(url, tok, "GET", "/api/states/" + id, "", &out);
   if (code != 200) {
-    error = code == 404 ? String("Entite introuvable") : error_text(code);
+    error = code == 404 ? String(TR("Entité introuvable", "Entity not found")) : error_text(code);
     return false;
   }
   return true;

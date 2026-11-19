@@ -31,18 +31,28 @@ button:disabled{opacity:.5;cursor:default}
   <button id="go" type="submit">Se connecter</button>
   <div class="err" id="err" role="alert"></div>
 </form>
+<script src="/lang.js"></script>
 <script>
 const f=document.getElementById('f'),pin=document.getElementById('pin'),err=document.getElementById('err'),go=document.getElementById('go');
+// Langue choisie sur l'ecran admin du panneau (/lang.js)
+const EN=window.LANG==='en',tr=(fr,en)=>EN?en:fr;
+if(EN){
+  document.documentElement.lang='en';document.title='HA Panel';
+  f.querySelector('h1').textContent='HA Panel';
+  f.querySelector('p').textContent='Enter the 6-digit password shown on the panel’s “Connected” screen. It changes at every startup.';
+  f.querySelector('label').textContent='Password';
+  go.textContent='Log in';
+}
 pin.addEventListener('input',()=>{pin.value=pin.value.replace(/\D/g,'').slice(0,6);err.textContent='';if(pin.value.length===6)f.requestSubmit();});
 f.addEventListener('submit',async e=>{
-  e.preventDefault();if(pin.value.length!==6){err.textContent='6 chiffres requis.';return;}
+  e.preventDefault();if(pin.value.length!==6){err.textContent=tr('6 chiffres requis.','6 digits required.');return;}
   go.disabled=true;err.textContent='';
   try{
     const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin:pin.value})});
     if(r.ok){location.reload();return;}
-    let m='Échec de la connexion.';try{m=(await r.json()).message||m;}catch(_){}
+    let m=tr('Échec de la connexion.','Login failed.');try{m=(await r.json()).message||m;}catch(_){}
     err.textContent=m;pin.value='';pin.focus();
-  }catch(_){err.textContent='Panneau injoignable.';}
+  }catch(_){err.textContent=tr('Panneau injoignable.','Panel unreachable.');}
   finally{go.disabled=false;}
 });
 </script>

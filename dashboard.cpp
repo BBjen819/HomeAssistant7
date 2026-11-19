@@ -1,3 +1,4 @@
+#include "i18n.h"
 #include "dashboard.h"
 #include "board_config.h"
 #include "ha_client.h"
@@ -216,7 +217,7 @@ static lv_obj_t *cam_message(lv_obj_t *parent) {
   lv_obj_set_style_pad_ver(l, 4, 0);
   lv_obj_set_style_radius(l, 6, 0);
   lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_CENTER, 0);
-  lv_label_set_text(l, "Caméra…");
+  lv_label_set_text(l, TR("Caméra…", "Camera…"));
   lv_obj_center(l);
   return l;
 }
@@ -274,7 +275,7 @@ static void fullscreen_open(const Bind &b) {
   s_full_img = cam_image(s_full, LCD_H_RES, LCD_V_RES);
   lv_obj_add_event_cb(s_full, fullscreen_event_cb, LV_EVENT_CLICKED, nullptr);
   s_full_cam = camera_open(b.entity, LCD_H_RES, LCD_V_RES, b.interval, CAM_CONTAIN, 0x000000);
-  if (s_full_cam < 0) lv_label_set_text(s_full_lbl, "Mémoire insuffisante");
+  if (s_full_cam < 0) lv_label_set_text(s_full_lbl, TR("Mémoire insuffisante", "Not enough memory"));
 }
 
 static void cameras_close() {
@@ -529,10 +530,10 @@ static void create_widget(lv_obj_t *scr, JsonObject w) {
     b.lbl = cam_message(box);
     b.img = cam_image(box, max(1, ww), max(1, hh));
     if (b.entity.isEmpty()) {
-      lv_label_set_text(b.lbl, "Aucune caméra");
+      lv_label_set_text(b.lbl, TR("Aucune caméra", "No camera"));
     } else {
       b.cam = camera_open(b.entity, max(1, ww), max(1, hh), b.interval, camera_fit_from(gs(w, "fit", "contain")), bg_rgb);
-      if (b.cam < 0) lv_label_set_text(b.lbl, "Mémoire insuffisante");
+      if (b.cam < 0) lv_label_set_text(b.lbl, TR("Mémoire insuffisante", "Not enough memory"));
     }
     add_bind(b, box, b.full ? LV_EVENT_CLICKED : LV_EVENT_ALL);
     s_cams.push_back(s_binds.size() - 1);
